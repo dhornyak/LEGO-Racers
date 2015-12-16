@@ -19,12 +19,12 @@ public:
 class Cube
 {
 public:
-	Cube(Position position, CubeColor color, float rotation, std::map<CubeSize, std::shared_ptr<Mesh>>::iterator mesh):
+	Cube(Position position, std::map<CubeColor, GLuint>::iterator color, float rotation, std::map<CubeSize, std::shared_ptr<Mesh>>::iterator mesh):
 		position(position), color(color), rotation(rotation), mesh(mesh)
 	{ }
 
 	Position position;
-	CubeColor color;
+	std::map<CubeColor, GLuint>::iterator color;
 	float rotation;
 	std::map<CubeSize, std::shared_ptr<Mesh>>::iterator mesh;
 };

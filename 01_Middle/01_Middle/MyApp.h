@@ -67,5 +67,8 @@ protected:
 	void DeleteTextures();
 
 	int cubeZPuffer[floorSize][floorSize];
+	void InitCubeZPuffer();
+
+	glm::mat4 GetCubeRotationMatrix(std::shared_ptr<Cube> cube);
 };
 

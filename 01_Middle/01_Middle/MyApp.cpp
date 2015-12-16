@@ -26,6 +26,7 @@ bool CMyApp::Init()
 	// Init components.
 	InitTextures();
 	InitCubePrefabs();
+	InitCubeZPuffer();
 
 	floor = GeometryFactory::GetLegoCube(floorSize, floorSize, CubeHeight::THIN);
 	floor->initBuffers();
@@ -127,10 +128,15 @@ void CMyApp::KeyboardDown(SDL_KeyboardEvent &key)
 	case SDLK_KP_2:
 		break;
 	case SDLK_KP_3:
+		if (activeCube->position.height > 1)
+		{
+			--activeCube->position.height;
+		}
 		break;
 	case SDLK_KP_4:
 		break;
 	case SDLK_KP_5:
+		activeCube->rotation = fmod(activeCube->rotation + 90.0f, 360.0f);
 		break;
 	case SDLK_KP_6:
 		break;
@@ -139,12 +145,24 @@ void CMyApp::KeyboardDown(SDL_KeyboardEvent &key)
 	case SDLK_KP_8:
 		break;
 	case SDLK_KP_9:
+		++activeCube->position.height;
 		break;
 	case SDLK_KP_PLUS:
+		++activeCube->mesh;
+		if (activeCube->mesh == cubePrefabs.end())
+		{
+			activeCube->mesh = cubePrefabs.begin();
+		}
 		break;
 	case SDLK_KP_MINUS:
+		activeCube->mesh = (activeCube->mesh == cubePrefabs.begin()) ? std::prev(cubePrefabs.end()) : std::prev(activeCube->mesh);
 		break;
 	case SDLK_KP_MULTIPLY:
+		++activeCube->color;
+		if (activeCube->color == cubeColorTextures.end())
+		{
+			activeCube->color = cubeColorTextures.begin();
+		}
 		break;
 	case SDLK_KP_ENTER:
 		break;
@@ -227,7 +245,7 @@ void CMyApp::DrawCube(std::shared_ptr<Cube> cube)
 	glm::mat4 matWorld =
 		glm::scale<float>(0.1f, 0.1f, 0.1f) *
 		glm::translate<float>(cube->position.col * GeometryFactory::cubeWidthUnit, cube->position.height * GeometryFactory::thinCubeHeightUnit, cube->position.row * GeometryFactory::cubeWidthUnit) *
-		glm::rotate<float>(cube->rotation, 0, 1, 0);
+		GetCubeRotationMatrix(cube);
 
 	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
 	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
@@ -237,7 +255,7 @@ void CMyApp::DrawCube(std::shared_ptr<Cube> cube)
 	m_program.SetUniform("MVP", mvp);
 	m_program.SetUniform("eye_pos", m_camera.GetEye());
 
-	m_program.SetTexture("texImage", 0, cubeColorTextures[cube->color]);
+	m_program.SetTexture("texImage", 0, cube->color->second);
 
 	cubePrefabs[cube->mesh->first]->draw();
 
@@ -272,7 +290,7 @@ void CMyApp::InitCubePrefabs()
 		}
 	}
 
-	activeCube = std::make_shared<Cube>(Position(0, 0, 1), cubeColorTextures.begin()->first, 0.0f, cubePrefabs.begin());
+	activeCube = std::make_shared<Cube>(Position(0, 0, 1), cubeColorTextures.begin(), 0.0f, cubePrefabs.begin());
 }
 
 void CMyApp::InitTextures()
@@ -293,4 +311,33 @@ void CMyApp::DeleteTextures()
 	{
 		glDeleteTextures(1, &kvpair.second);
 	});
+}
+
+void CMyApp::InitCubeZPuffer()
+{
+	for (int r = 0; r < floorSize; ++r)
+	{
+		for (int c = 0; c < floorSize; ++c)
+		{
+			cubeZPuffer[r][c] = 0;
+		}
+	}
+}
+
+glm::mat4 CMyApp::GetCubeRotationMatrix(std::shared_ptr<Cube> cube)
+{
+	auto rot_tr = 
+		glm::rotate<float>(cube->rotation, 0.0f, 1.0f, 0.0f) *
+		glm::translate<float>(cube->mesh->first.cols * -GeometryFactory::cubeWidthUnit / 2.0, 0.0f, cube->mesh->first.rows * -GeometryFactory::cubeWidthUnit / 2.0f);
+
+	if (fmod(cube->rotation, 180.f) == 0.0f)
+	{
+		return
+			glm::translate<float>(cube->mesh->first.cols * GeometryFactory::cubeWidthUnit / 2.0, 0.0f, cube->mesh->first.rows * GeometryFactory::cubeWidthUnit / 2.0f) *
+			rot_tr;
+	}
+
+	return
+		glm::translate<float>(cube->mesh->first.rows * GeometryFactory::cubeWidthUnit / 2.0, 0.0f, cube->mesh->first.cols * GeometryFactory::cubeWidthUnit / 2.0f) *
+		rot_tr;
 }
