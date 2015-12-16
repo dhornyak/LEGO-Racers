@@ -23,6 +23,14 @@ CMyApp::~CMyApp(void)
 
 bool CMyApp::Init()
 {
+	// Init components.
+	InitTextures();
+	InitCubePrefabs();
+
+	floor = GeometryFactory::GetLegoCube(floorSize, floorSize, CubeHeight::THIN);
+	floor->initBuffers();
+	floorTextureID = cubeColorTextures[CubeColor::GRAY];
+
 	// törlési szín legyen kékes
 	glClearColor(0.125f, 0.25f, 0.5f, 1.0f);
 
@@ -36,10 +44,10 @@ bool CMyApp::Init()
 	m_vb.AddAttribute(1, 3);
 	m_vb.AddAttribute(2, 2);
 
-	m_vb.AddData(0, -25, 0, -25);
-	m_vb.AddData(0, 25, 0, -25);
-	m_vb.AddData(0, -25, 0, 25);
-	m_vb.AddData(0, 25, 0, 25);
+	m_vb.AddData(0, -15, 0, -15);
+	m_vb.AddData(0, 15, 0, -15);
+	m_vb.AddData(0, -15, 0, 15);
+	m_vb.AddData(0, 15, 0, 15);
 
 	m_vb.AddData(1, 0, 1, 0);
 	m_vb.AddData(1, 0, 1, 0);
@@ -82,6 +90,7 @@ bool CMyApp::Init()
 
 void CMyApp::Clean()
 {
+	glDeleteTextures(1, &basePlainTextureID);
 }
 
 void CMyApp::Update()
@@ -107,6 +116,8 @@ void CMyApp::Render()
 
 void CMyApp::KeyboardDown(SDL_KeyboardEvent &key)
 {
+	m_camera.KeyboardDown(key);
+
 	switch (key.keysym.sym)
 	{
 	case SDLK_KP_0:
@@ -142,6 +153,16 @@ void CMyApp::KeyboardDown(SDL_KeyboardEvent &key)
 	}
 }
 
+void CMyApp::KeyboardUp(SDL_KeyboardEvent &key)
+{
+	m_camera.KeyboardUp(key);
+}
+
+void CMyApp::MouseMove(SDL_MouseMotionEvent &mouse)
+{
+	m_camera.MouseMove(mouse);
+}
+
 void CMyApp::Resize(int _w, int _h)
 {
 	glViewport(0, 0, _w, _h);
@@ -151,18 +172,85 @@ void CMyApp::Resize(int _w, int _h)
 
 void CMyApp::DrawBasePlain()
 {
+	m_program.On();
+
+	glm::mat4 matWorld = glm::mat4(1.0f);
+	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
+	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
+
+	m_program.SetUniform("world", matWorld);
+	m_program.SetUniform("worldIT", matWorldIT);
+	m_program.SetUniform("MVP", mvp);
+	m_program.SetUniform("eye_pos", m_camera.GetEye());
+
+	m_program.SetTexture("texImage", 0, basePlainTextureID);
+
+	// kapcsoljuk be a VAO-t (a VBO jön vele együtt)
+	m_vb.On();
+
+	m_vb.DrawIndexed(GL_TRIANGLES, 0, 6, 0);
+
+	m_vb.Off();
+
+	// shader kikapcsolasa
+	m_program.Off();
 }
 
 void CMyApp::DrawFloor()
 {
+	m_program.On();
+
+	glm::mat4 matWorld =
+		glm::scale<float>(0.1f, 0.1f, 0.1f) *
+		glm::translate<float>(floorSize / 2 * -GeometryFactory::cubeWidthUnit, 0.0f, floorSize / 2 * -GeometryFactory::cubeWidthUnit);
+
+	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
+	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
+
+	m_program.SetUniform("world", matWorld);
+	m_program.SetUniform("worldIT", matWorldIT);
+	m_program.SetUniform("MVP", mvp);
+	m_program.SetUniform("eye_pos", m_camera.GetEye());
+
+	m_program.SetTexture("texImage", 0, floorTextureID);
+
+	floor->draw();
+
+	// shader kikapcsolasa
+	m_program.Off();
 }
 
 void CMyApp::DrawCube(std::shared_ptr<Cube> cube)
 {
+	m_program.On();
+
+	glm::mat4 matWorld =
+		glm::scale<float>(0.1f, 0.1f, 0.1f) *
+		glm::translate<float>(cube->position.col * GeometryFactory::cubeWidthUnit, cube->position.height * GeometryFactory::thinCubeHeightUnit, cube->position.row * GeometryFactory::cubeWidthUnit) *
+		glm::rotate<float>(cube->rotation, 0, 1, 0);
+
+	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
+	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
+
+	m_program.SetUniform("world", matWorld);
+	m_program.SetUniform("worldIT", matWorldIT);
+	m_program.SetUniform("MVP", mvp);
+	m_program.SetUniform("eye_pos", m_camera.GetEye());
+
+	m_program.SetTexture("texImage", 0, cubeColorTextures[cube->color]);
+
+	cubePrefabs[cube->mesh->first]->draw();
+
+	// shader kikapcsolasa
+	m_program.Off();
 }
 
 void CMyApp::DrawAllCubes()
 {
+	std::for_each(cubes.begin(), cubes.end(), [this](auto cube)
+	{
+		DrawCube(cube);
+	});
 }
 
 void CMyApp::InitCubePrefabs()

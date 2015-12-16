@@ -13,7 +13,7 @@ out vec4 fs_out_col;
 //
 
 // színtér tulajdonságok
-uniform vec3 eye_pos = vec3(0, 15, 15);
+uniform vec3 eye_pos = vec3(0, 50, 50);
 
 // fénytulajdonságok
 uniform vec3 light_pos = vec3( 0, 15, 15 );

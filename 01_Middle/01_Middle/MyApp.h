@@ -35,8 +35,8 @@ public:
 	void Render();
 
 	void KeyboardDown(SDL_KeyboardEvent&);
-	void KeyboardUp(SDL_KeyboardEvent&) { };
-	void MouseMove(SDL_MouseMotionEvent&) { };
+	void KeyboardUp(SDL_KeyboardEvent&);
+	void MouseMove(SDL_MouseMotionEvent&);
 	void MouseDown(SDL_MouseButtonEvent&) { };
 	void MouseUp(SDL_MouseButtonEvent&) { };
 	void MouseWheel(SDL_MouseWheelEvent&) { };
