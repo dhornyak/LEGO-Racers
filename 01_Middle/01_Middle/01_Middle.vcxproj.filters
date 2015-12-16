@@ -22,9 +22,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="MyApp.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="gCamera.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
@@ -41,6 +38,9 @@
       <Filter>Utils</Filter>
     </ClCompile>
     <ClCompile Include="GeometryFactory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MyApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
