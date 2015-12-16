@@ -12,7 +12,8 @@
 #include "Parameters.h"
 #include <algorithm>
 
-CMyApp::CMyApp(void)
+CMyApp::CMyApp(void) :
+	defaultActiveCubePos(Position(0, 0, 10))
 {
 	basePlainTextureID = TextureFromFile("LEGO_logo.jpg");
 }
@@ -122,27 +123,32 @@ void CMyApp::KeyboardDown(SDL_KeyboardEvent &key)
 	switch (key.keysym.sym)
 	{
 	case SDLK_KP_0:
+		PutDownActiveCube();
 		break;
-	case SDLK_KP_1:
+	case SDLK_KP_1: // unused
 		break;
 	case SDLK_KP_2:
+		++activeCube->position.row;
 		break;
 	case SDLK_KP_3:
-		if (activeCube->position.height > 1)
+		if (activeCube->position.height - 1 > cubeZPuffer[activeCube->position.row + halfFloorSize][activeCube->position.col + halfFloorSize])
 		{
 			--activeCube->position.height;
 		}
 		break;
 	case SDLK_KP_4:
+		--activeCube->position.col;
 		break;
 	case SDLK_KP_5:
 		activeCube->rotation = fmod(activeCube->rotation + 90.0f, 360.0f);
 		break;
 	case SDLK_KP_6:
+		++activeCube->position.col;
 		break;
-	case SDLK_KP_7:
+	case SDLK_KP_7: // unused
 		break;
 	case SDLK_KP_8:
+		--activeCube->position.row;
 		break;
 	case SDLK_KP_9:
 		++activeCube->position.height;
@@ -290,7 +296,7 @@ void CMyApp::InitCubePrefabs()
 		}
 	}
 
-	activeCube = std::make_shared<Cube>(Position(0, 0, 1), cubeColorTextures.begin(), 0.0f, cubePrefabs.begin());
+	activeCube = std::make_shared<Cube>(defaultActiveCubePos, cubeColorTextures.begin(), 0.0f, cubePrefabs.begin());
 }
 
 void CMyApp::InitTextures()
@@ -340,4 +346,60 @@ glm::mat4 CMyApp::GetCubeRotationMatrix(std::shared_ptr<Cube> cube)
 	return
 		glm::translate<float>(cube->mesh->first.rows * GeometryFactory::cubeWidthUnit / 2.0, 0.0f, cube->mesh->first.cols * GeometryFactory::cubeWidthUnit / 2.0f) *
 		rot_tr;
+}
+
+void CMyApp::PutDownActiveCube()
+{
+	int cubeRowNum, cubeColNum;
+
+	// Determine row and column nums based on rotation of the active cube.
+	if (fmod(activeCube->rotation, 180.0f) == 0.0)
+	{
+		cubeRowNum = activeCube->mesh->first.rows; cubeColNum = activeCube->mesh->first.cols;
+	}
+	else
+	{
+		cubeRowNum = activeCube->mesh->first.cols; cubeColNum = activeCube->mesh->first.rows;
+	}
+
+	// Check whether the active cube is above the base panel.
+	if (!(activeCube->position.row + cubeRowNum <= halfFloorSize && activeCube->position.col + cubeColNum <= halfFloorSize))
+	{
+		return;
+	}
+
+	// Find maximal Z value in the puffer below the active cube.
+	int zPufferRowInd, zPufferColInd;
+	int maxHeight = cubeZPuffer[activeCube->position.row + halfFloorSize][activeCube->position.col + halfFloorSize];
+	
+	for (int r = activeCube->position.row; r < activeCube->position.row + cubeRowNum; ++r)
+	{
+		for (int c = activeCube->position.col; c < activeCube->position.col + cubeColNum; ++c)
+		{
+			zPufferRowInd = r + halfFloorSize; zPufferColInd = c + halfFloorSize;
+			int currentZ = cubeZPuffer[zPufferRowInd][zPufferColInd];
+			
+			if (currentZ >= activeCube->position.height) return;
+
+			if (currentZ > maxHeight) maxHeight = currentZ;
+		}
+	}
+
+	// Update Z puffer with dimensions of the active cube.
+	std::cout << "Putting down active cube to height " << maxHeight + 1 << std::endl;
+
+	for (int r = activeCube->position.row; r < activeCube->position.row + cubeRowNum; ++r)
+	{
+		for (int c = activeCube->position.col; c < activeCube->position.col + cubeColNum; ++c)
+		{
+			zPufferRowInd = r + halfFloorSize; zPufferColInd = c + halfFloorSize;
+			cubeZPuffer[zPufferRowInd][zPufferColInd] += (int)activeCube->mesh->first.height;
+		}
+	}
+
+	// Store active cube and get a new one.
+	auto newActiveCube = std::make_shared<Cube>(defaultActiveCubePos, activeCube->color, 0.0f, activeCube->mesh);
+	activeCube->position.height = maxHeight + 1;
+	cubes.push_back(activeCube);
+	activeCube = newActiveCube;
 }

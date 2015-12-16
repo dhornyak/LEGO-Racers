@@ -48,6 +48,8 @@ protected:
 	gVertexBuffer	m_vb;
 
 	static const int floorSize = 26;
+	static const int halfFloorSize = floorSize / 2;
+
 	std::shared_ptr<Mesh> floor = nullptr;
 	GLuint floorTextureID;
 	GLuint basePlainTextureID;
@@ -55,6 +57,8 @@ protected:
 	void DrawFloor();
 
 	std::shared_ptr<Cube> activeCube;
+	Position defaultActiveCubePos;
+
 	std::vector<std::shared_ptr<Cube>> cubes;
 	void DrawCube(std::shared_ptr<Cube> cube);
 	void DrawAllCubes();
@@ -70,5 +74,6 @@ protected:
 	void InitCubeZPuffer();
 
 	glm::mat4 GetCubeRotationMatrix(std::shared_ptr<Cube> cube);
+	void PutDownActiveCube();
 };
 
