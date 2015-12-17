@@ -16,6 +16,8 @@ CMyApp::CMyApp(void) :
 	defaultActiveCubePos(Position(0, 0, 10))
 {
 	basePlainTextureID = TextureFromFile("LEGO_logo.jpg");
+	driver = GeometryFactory::GetDriver();
+	driver->initBuffers();
 }
 
 CMyApp::~CMyApp(void)
@@ -114,6 +116,26 @@ void CMyApp::Render()
 	DrawFloor();
 	DrawAllCubes();
 	DrawCube(activeCube);
+
+	/////////////////////////////////////////
+
+	m_program.On();
+
+	glm::mat4 matWorld = glm::scale<float>(0.1f, 0.1f, 0.1f) * glm::translate<float>(0.0f, GeometryFactory::thinCubeHeightUnit, 0.0f);
+	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
+	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
+
+	m_program.SetUniform("world", matWorld);
+	m_program.SetUniform("worldIT", matWorldIT);
+	m_program.SetUniform("MVP", mvp);
+	m_program.SetUniform("eye_pos", m_camera.GetEye());
+
+	m_program.SetTexture("texImage", 0, cubeColorTextures[CubeColor::YELLOW]);
+
+	driver->draw();
+
+	// shader kikapcsolasa
+	m_program.Off();
 }
 
 void CMyApp::KeyboardDown(SDL_KeyboardEvent &key)
@@ -170,8 +192,13 @@ void CMyApp::KeyboardDown(SDL_KeyboardEvent &key)
 			activeCube->color = cubeColorTextures.begin();
 		}
 		break;
-	case SDLK_KP_ENTER:
+	case SDLK_KP_ENTER: // unused
 		break;
+	case SDLK_BACKSPACE:
+		if (cubes.size() > 0)
+		{
+			cubes.pop_back();
+		}
 	default:
 		break;
 	}
@@ -309,6 +336,7 @@ void CMyApp::InitTextures()
 	cubeColorTextures[CubeColor::WHITE] = TextureFromFile("white.png");
 	cubeColorTextures[CubeColor::BLACK] = TextureFromFile("black.png");
 	cubeColorTextures[CubeColor::BROWN] = TextureFromFile("brown.png");
+	cubeColorTextures[CubeColor::PEACH] = TextureFromFile("peach.png");
 }
 
 void CMyApp::DeleteTextures()

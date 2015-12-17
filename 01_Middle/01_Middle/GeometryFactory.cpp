@@ -96,6 +96,50 @@ std::shared_ptr<Mesh> GeometryFactory::GetCylinder(glm::vec3 bottomCenterPositio
 	return cylinder;
 }
 
+glm::vec3 GeometryFactory::CalculateSphereCoordinate(float x, float y, float radius)
+{
+	float u = 2 * M_PI * x;
+	float v = M_PI * y;
+	
+	glm::vec3 vertex(radius * cos(u)*sin(v), radius * cos(v), radius * sin(u)*sin(v));
+	return vertex;
+}
+
+std::shared_ptr<Mesh> GeometryFactory::GetSphere(glm::vec3 center, float radius)
+{
+	auto sphere = std::make_shared<Mesh>();
+
+	float delta = 1.0 / N;
+	glm::vec2 tex(0.0f, 0.0f);
+
+	for (int i = 0; i < N; ++i) 
+	{
+		for (int j = 0; j < N; ++j) 
+		{
+			float x = i * delta;
+			float y = j * delta;
+
+			// 1. háromszög: x,y x+delta,y y+delta,x
+			auto a = CalculateSphereCoordinate(x, y, radius) + center;
+			auto b = CalculateSphereCoordinate(x + delta, y, radius) + center;
+			auto c = CalculateSphereCoordinate(x, y + delta, radius) + center;
+			
+			auto dir = glm::cross((b - a), (c - a)); // cross product
+			sphere->addTriangle(a, b, c, dir / (float)dir.length(), tex);
+
+			// 2. háromszög: x+delta,y x+delta,y+delta y+delta,x
+			a = CalculateSphereCoordinate(x + delta, y, radius) + center;
+			b = CalculateSphereCoordinate(x + delta, y + delta, radius) + center;
+			c = CalculateSphereCoordinate(x, y + delta, radius) + center;
+
+			dir = glm::cross((b - a), (c - a)); // cross product
+			sphere->addTriangle(a, b, c, dir / (float)dir.length(), tex);
+		}
+	}
+
+	return sphere;
+}
+
 std::shared_ptr<Mesh> GeometryFactory::GetKnob(glm::vec3 bottomCenterPosition)
 {
 	auto knob = GetCylinder(bottomCenterPosition, knobRadius, knobHeight);
@@ -131,4 +175,102 @@ std::shared_ptr<Mesh> GeometryFactory::GetLegoCube(int rows, int cols, CubeHeigh
 	}
 
 	return cubeMesh;
+}
+
+std::shared_ptr<Mesh> GeometryFactory::GetDriverTorso(glm::vec3 bottomCenterPosition)
+{
+	auto torso = std::make_shared<Mesh>();
+
+	float height = 5.0f * thinCubeHeightUnit;
+	
+	float bottomXWidthHalf = 1.0f * cubeWidthUnit - cubeWidthOffset;
+	float bottomZWidthHalf = 0.5f * cubeWidthUnit - cubeWidthOffset;
+
+	float topXWidthHalf = 0.75f * cubeWidthUnit - cubeWidthOffset;
+	float topZWidthHalf = 0.5f * cubeWidthUnit - cubeWidthOffset;
+
+	glm::vec3 topCenterPosition = bottomCenterPosition;
+	topCenterPosition.y += height;
+
+	// corner positions
+	glm::vec3 bottomE(bottomCenterPosition.x - bottomXWidthHalf, bottomCenterPosition.y, bottomCenterPosition.z - bottomZWidthHalf);
+	glm::vec3 bottomF(bottomCenterPosition.x + bottomXWidthHalf, bottomCenterPosition.y, bottomCenterPosition.z - bottomZWidthHalf);
+	glm::vec3 bottomG(bottomCenterPosition.x - bottomXWidthHalf, bottomCenterPosition.y, bottomCenterPosition.z + bottomZWidthHalf);
+	glm::vec3 bottomH(bottomCenterPosition.x + bottomXWidthHalf, bottomCenterPosition.y, bottomCenterPosition.z + bottomZWidthHalf);
+
+	glm::vec3 topA(topCenterPosition.x - topXWidthHalf, topCenterPosition.y, topCenterPosition.z - topZWidthHalf);
+	glm::vec3 topB(topCenterPosition.x + topXWidthHalf, topCenterPosition.y, topCenterPosition.z - topZWidthHalf);
+	glm::vec3 topC(topCenterPosition.x - topXWidthHalf, topCenterPosition.y, topCenterPosition.z + topZWidthHalf);
+	glm::vec3 topD(topCenterPosition.x + topXWidthHalf, topCenterPosition.y, topCenterPosition.z + topZWidthHalf);
+
+	glm::vec2 tex(0.0f, 0.0f);
+
+	torso->addQuad(topA, topC, topD, topB, glm::vec3(0.0f, 1.0f, 0.0f), tex); // top
+	torso->addQuad(topC, bottomG, bottomH, topD, glm::vec3(0.0f, 0.0f, 1.0f), tex); // front
+	torso->addQuad(topD, bottomH, bottomF, topB, glm::vec3(1.0f, 0.0f, 0.0f), tex); // right
+	torso->addQuad(topB, bottomF, bottomE, topA, glm::vec3(0.0f, 0.0f, -1.0f), tex); // back
+	torso->addQuad(topA, bottomE, bottomG, topC, glm::vec3(-1.0f, 0.0f, 0.0f), tex); // left
+	torso->addQuad(bottomG, bottomE, bottomF, bottomH, glm::vec3(0.0f, -1.0f, 0.0f), tex); // bottom
+
+	return torso;
+}
+
+std::shared_ptr<Mesh> GeometryFactory::GetDriver()
+{
+	auto driver = std::make_shared<Mesh>();
+
+	float xWidth = 1 * cubeWidthUnit - 2 * cubeWidthOffset;
+	float zWidth = 2 * cubeWidthUnit - 2 * cubeWidthOffset;
+
+	// left leg
+	driver = GetCuboid(
+		glm::vec3(cubeWidthOffset, 2.0 * thinCubeHeightUnit, cubeWidthOffset), 
+		glm::vec3(cubeWidthOffset + xWidth, 0.0f, cubeWidthOffset + zWidth));
+	
+	driver->merge(GetCuboid(
+		glm::vec3(cubeWidthOffset, 3.0 * thinCubeHeightUnit, cubeWidthOffset + zWidth - thinCubeHeightUnit), 
+		glm::vec3(cubeWidthOffset + xWidth, 0.0f, cubeWidthOffset + zWidth)).get());
+
+	// right leg
+	driver->merge(GetCuboid(
+		glm::vec3(2.0f * cubeWidthOffset + xWidth, 2.0 * thinCubeHeightUnit, cubeWidthOffset),
+		glm::vec3(2.0f * cubeWidthOffset + 2.0f * xWidth, 0.0f, cubeWidthOffset + zWidth)).get());
+
+	driver->merge(GetCuboid(
+		glm::vec3(2.0f * cubeWidthOffset + xWidth, 3.0 * thinCubeHeightUnit, cubeWidthOffset + zWidth - thinCubeHeightUnit),
+		glm::vec3(2.0f * cubeWidthOffset + 2.0f * xWidth, 0.0f, cubeWidthOffset + zWidth)).get());
+
+	// torso
+	driver->merge(GetDriverTorso(glm::vec3(cubeWidthOffset + xWidth, 2.0 * thinCubeHeightUnit + cubeWidthOffset, cubeWidthOffset + 0.5 * cubeWidthUnit)).get());
+
+	// left arm
+	driver->merge(GetCuboid(
+		glm::vec3(cubeWidthOffset, 5.5 * thinCubeHeightUnit, cubeWidthOffset),
+		glm::vec3(cubeWidthOffset + xWidth / 2.0f, 4.5f * thinCubeHeightUnit, cubeWidthOffset + zWidth)).get());
+
+	// right arm
+	driver->merge(GetCuboid(
+		glm::vec3(2.0f * cubeWidthOffset + 1.5f * xWidth, 5.5 * thinCubeHeightUnit, cubeWidthOffset),
+		glm::vec3(2.0f * cubeWidthOffset + 2.0f * xWidth, 4.5f * thinCubeHeightUnit, cubeWidthOffset + zWidth)).get());
+
+	// head
+	driver->merge(GeometryFactory::GetSphere(glm::vec3(cubeWidthOffset + xWidth, 8.5 * thinCubeHeightUnit - cubeWidthOffset, cubeWidthOffset + 0.5 * cubeWidthUnit), cubeWidthUnit / 1.5 - cubeWidthOffset).get());
+
+	// driving wheel base
+	driver->merge(GetCuboid(
+		glm::vec3(cubeWidthOffset, thinCubeHeightUnit, 2 * cubeWidthOffset + zWidth),
+		glm::vec3(2.0f * cubeWidthOffset + 2.0f * xWidth, 0.0f, 2 * cubeWidthOffset + zWidth + cubeWidthUnit)).get());
+
+	// driving wheel cylinder
+	driver->merge(GetCylinder(glm::vec3(cubeWidthOffset + xWidth, 0.0f, 2.0f * cubeWidthOffset + 1.25f * zWidth), knobRadius / 2.0f, 6.0 * thinCubeHeightUnit).get());
+
+	// driving wheel circle
+	driver->merge(GetCircle(glm::vec3(cubeWidthOffset + xWidth, 6.0 * thinCubeHeightUnit, 2.0f * cubeWidthOffset + 1.25f * zWidth), knobRadius / 2.0f).get());
+
+	// driving wheel
+	driver->merge(GetCuboid(
+		glm::vec3(cubeWidthOffset + xWidth / 2.0f, 7.0f * thinCubeHeightUnit, 2.0f * cubeWidthOffset + 1.20f * zWidth),
+		glm::vec3(2.0f * cubeWidthOffset + 1.5f * xWidth, 5.0f * thinCubeHeightUnit, 2.0f * cubeWidthOffset + 1.30f * zWidth)).get());
+
+	return driver;
 }

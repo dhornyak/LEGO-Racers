@@ -51,6 +51,17 @@ public:
 		addTriangleIndices(i + 1, i + 2, i + 3);
 	}
 
+	void addTriangle(glm::vec3 posA, glm::vec3 posB, glm::vec3 posC, glm::vec3 normal, glm::vec2 tex)
+	{
+		auto i = vertices.size();
+
+		vertices.push_back({ posA, normal, tex }); // i
+		vertices.push_back({ posB, normal, tex }); // i + 1
+		vertices.push_back({ posC, normal, tex }); // i + 2
+
+		addTriangleIndices(i, i + 1, i + 2);
+	}
+
 	void merge(Mesh *other)
 	{
 		auto i = vertices.size();

@@ -14,9 +14,14 @@ public:
 	static std::shared_ptr<Mesh> GetCuboid(glm::vec3 topLeftCorner, glm::vec3 bottomRightCorner);
 	static std::shared_ptr<Mesh> GetCircle(glm::vec3 center, float radius);
 	static std::shared_ptr<Mesh> GetCylinder(glm::vec3 bottomCenterPosition, float radius, float height, bool reverse = false);
+	
+	static glm::vec3 CalculateSphereCoordinate(float x, float y, float radius);
+	static std::shared_ptr<Mesh> GetSphere(glm::vec3 center, float radius);
 
 	static std::shared_ptr<Mesh> GetKnob(glm::vec3 bottomCenterPosition);
 	static std::shared_ptr<Mesh> GetLegoCube(int rows, int cols, CubeHeight height);
+	static std::shared_ptr<Mesh> GetDriverTorso(glm::vec3 bottomCenterPosition);
+	static std::shared_ptr<Mesh> GetDriver();
 protected:
 	static const int N;
 

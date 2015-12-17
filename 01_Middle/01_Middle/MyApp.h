@@ -75,5 +75,7 @@ protected:
 
 	glm::mat4 GetCubeRotationMatrix(std::shared_ptr<Cube> cube);
 	void PutDownActiveCube();
+
+	std::shared_ptr<Mesh> driver;
 };
 
