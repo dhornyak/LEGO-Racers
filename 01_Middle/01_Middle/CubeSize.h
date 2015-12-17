@@ -5,7 +5,7 @@
 struct CubeSize
 {
 public:
-	CubeSize(int rows, int cols, CubeHeight height) :
+	CubeSize(int rows, int cols, int height) :
 		rows(rows), cols(cols), height(height)
 	{ }
 
@@ -19,5 +19,5 @@ public:
 
 	int rows;
 	int cols;
-	CubeHeight height;
+	int height;
 };

@@ -44,7 +44,7 @@ std::shared_ptr<Mesh> GeometryFactory::GetCuboid(glm::vec3 topLeftCorner, glm::v
 	return cuboid;
 }
 
-std::shared_ptr<Mesh> GeometryFactory::GetCircle(glm::vec3 center, float radius)
+std::shared_ptr<Mesh> GeometryFactory::GetCircle(glm::vec3 center, glm::vec3 normal, float radius)
 {
 	auto circle = std::make_shared<Mesh>();
 
@@ -52,10 +52,22 @@ std::shared_ptr<Mesh> GeometryFactory::GetCircle(glm::vec3 center, float radius)
 	{
 		float angle = (2 * M_PI / N) * i;
 		glm::vec2 tex(0.25f * cos(angle + M_PI / 2.0f) + 0.5f, 0.25f * sin(angle + M_PI / 2.0f) + 0.5f);
-		circle->addVertex({ glm::vec3(radius * cos(angle) + center.x, center.y, radius * sin(angle) + center.z), glm::vec3(0.0f, 1.0f, 0.0f), tex });
+		
+		if (abs(normal.x) == 1.0f)
+		{
+			circle->addVertex({ glm::vec3(0.0f, radius * sin(angle), radius * cos(angle)) + center, normal, tex });
+		}
+		else if (abs(normal.y) == 1.0f)
+		{
+			circle->addVertex({ glm::vec3(radius * cos(angle), 0.0f, radius * sin(angle)) + center, normal, tex });
+		}
+		else if (abs(normal.z) == 1.0f)
+		{
+			circle->addVertex({ glm::vec3(radius * sin(angle), radius * cos(angle), 0.0f) + center, normal, tex });
+		}
 	}
 
-	circle->addVertex({ center, glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.5f, 0.5f) });
+	circle->addVertex({ center, normal, glm::vec2(0.5f, 0.5f) });
 
 	for (int i = 0; i < N; ++i)
 	{
@@ -65,7 +77,7 @@ std::shared_ptr<Mesh> GeometryFactory::GetCircle(glm::vec3 center, float radius)
 	return circle;
 }
 
-std::shared_ptr<Mesh> GeometryFactory::GetCylinder(glm::vec3 bottomCenterPosition, float radius, float height, bool reverse)
+std::shared_ptr<Mesh> GeometryFactory::GetCylinder(glm::vec3 bottomCenterPosition, glm::vec3 direction, float radius, float height, bool reverse)
 {
 	auto cylinder = std::make_shared<Mesh>();
 
@@ -74,8 +86,22 @@ std::shared_ptr<Mesh> GeometryFactory::GetCylinder(glm::vec3 bottomCenterPositio
 	for (int i = 0; i <= N; ++i)
 	{
 		float angle = (2 * M_PI / N) * i;
-		topCorners.push_back(glm::vec3(radius * cos(angle) + bottomCenterPosition.x, height + bottomCenterPosition.y, radius * sin(angle) + bottomCenterPosition.z));
-		bottomCorners.push_back(glm::vec3(radius * cos(angle) + bottomCenterPosition.x, bottomCenterPosition.y, radius * sin(angle) + bottomCenterPosition.z));
+
+		if (direction.x == 1.0f)
+		{
+			topCorners.push_back(glm::vec3(height, radius * sin(angle), radius * cos(angle)) + bottomCenterPosition);
+			bottomCorners.push_back(glm::vec3(0.0f, radius * sin(angle), radius * cos(angle)) + bottomCenterPosition);
+		}
+		else if (direction.y == 1.0f)
+		{
+			topCorners.push_back(glm::vec3(radius * cos(angle), height, radius * sin(angle)) + bottomCenterPosition);
+			bottomCorners.push_back(glm::vec3(radius * cos(angle), 0.0f, radius * sin(angle)) + bottomCenterPosition);
+		}
+		else if (direction.z == 1.0f)
+		{
+			topCorners.push_back(glm::vec3(radius * sin(angle), radius * cos(angle), height) + bottomCenterPosition);
+			bottomCorners.push_back(glm::vec3(radius * sin(angle), radius * cos(angle), 0.0f) + bottomCenterPosition);
+		}
 	}
 
 	for (int i = 0; i < N; ++i)
@@ -142,8 +168,8 @@ std::shared_ptr<Mesh> GeometryFactory::GetSphere(glm::vec3 center, float radius)
 
 std::shared_ptr<Mesh> GeometryFactory::GetKnob(glm::vec3 bottomCenterPosition)
 {
-	auto knob = GetCylinder(bottomCenterPosition, knobRadius, knobHeight);
-	knob->merge(GetCircle(bottomCenterPosition + glm::vec3(0.0f, knobHeight, 0.0f), knobRadius).get());
+	auto knob = GetCylinder(bottomCenterPosition, glm::vec3(0.0f, 1.0f, 0.0f), knobRadius, knobHeight);
+	knob->merge(GetCircle(bottomCenterPosition + glm::vec3(0.0f, knobHeight, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), knobRadius).get());
 
 	return knob;
 }
@@ -262,10 +288,10 @@ std::shared_ptr<Mesh> GeometryFactory::GetDriver()
 		glm::vec3(2.0f * cubeWidthOffset + 2.0f * xWidth, 0.0f, 2 * cubeWidthOffset + zWidth + cubeWidthUnit)).get());
 
 	// driving wheel cylinder
-	driver->merge(GetCylinder(glm::vec3(cubeWidthOffset + xWidth, 0.0f, 2.0f * cubeWidthOffset + 1.25f * zWidth), knobRadius / 2.0f, 6.0 * thinCubeHeightUnit).get());
+	driver->merge(GetCylinder(glm::vec3(cubeWidthOffset + xWidth, 0.0f, 2.0f * cubeWidthOffset + 1.25f * zWidth), glm::vec3(0.0f, 1.0f, 0.0f), knobRadius / 2.0f, 6.0 * thinCubeHeightUnit).get());
 
 	// driving wheel circle
-	driver->merge(GetCircle(glm::vec3(cubeWidthOffset + xWidth, 6.0 * thinCubeHeightUnit, 2.0f * cubeWidthOffset + 1.25f * zWidth), knobRadius / 2.0f).get());
+	driver->merge(GetCircle(glm::vec3(cubeWidthOffset + xWidth, 6.0 * thinCubeHeightUnit, 2.0f * cubeWidthOffset + 1.25f * zWidth), glm::vec3(0.0f, 1.0f, 0.0f), knobRadius / 2.0f).get());
 
 	// driving wheel
 	driver->merge(GetCuboid(
@@ -273,4 +299,17 @@ std::shared_ptr<Mesh> GeometryFactory::GetDriver()
 		glm::vec3(2.0f * cubeWidthOffset + 1.5f * xWidth, 5.0f * thinCubeHeightUnit, 2.0f * cubeWidthOffset + 1.30f * zWidth)).get());
 
 	return driver;
+}
+
+std::shared_ptr<Mesh> GeometryFactory::GetReflector()
+{
+	auto reflector = GetLegoCube(1, 1, CubeHeight::THIN);
+	reflector->merge(GetCylinder(glm::vec3(cubeWidthUnit / 2.0f, 0.0f, cubeWidthUnit / 2.0f), glm::vec3(0.0f, 1.0f, 0.0f), knobHeight / 2.0f, 3.0f * thinCubeHeightUnit).get());
+	reflector->merge(GetCuboid(
+		glm::vec3(cubeWidthOffset, 6.0f * thinCubeHeightUnit, cubeWidthOffset),
+		glm::vec3(cubeWidthOffset + cubeWidthUnit, 3.0f * thinCubeHeightUnit, cubeWidthOffset + cubeWidthUnit)).get());
+	reflector->merge(GetKnob(glm::vec3(cubeWidthUnit / 2.0f, 6.0f * thinCubeHeightUnit, cubeWidthUnit / 2.0f)).get());
+	reflector->merge(GetSphere(glm::vec3(cubeWidthUnit / 2.0f, 4.5f * thinCubeHeightUnit, cubeWidthUnit), 1.4f * knobRadius).get());
+
+	return reflector;
 }

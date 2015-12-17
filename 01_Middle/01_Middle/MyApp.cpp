@@ -16,8 +16,6 @@ CMyApp::CMyApp(void) :
 	defaultActiveCubePos(Position(0, 0, 10))
 {
 	basePlainTextureID = TextureFromFile("LEGO_logo.jpg");
-	driver = GeometryFactory::GetDriver();
-	driver->initBuffers();
 }
 
 CMyApp::~CMyApp(void)
@@ -28,6 +26,7 @@ bool CMyApp::Init()
 {
 	// Init components.
 	InitTextures();
+	InitSpecialCubePrefabs();
 	InitCubePrefabs();
 	InitCubeZPuffer();
 
@@ -116,26 +115,6 @@ void CMyApp::Render()
 	DrawFloor();
 	DrawAllCubes();
 	DrawCube(activeCube);
-
-	/////////////////////////////////////////
-
-	m_program.On();
-
-	glm::mat4 matWorld = glm::scale<float>(0.1f, 0.1f, 0.1f) * glm::translate<float>(0.0f, GeometryFactory::thinCubeHeightUnit, 0.0f);
-	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
-	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
-
-	m_program.SetUniform("world", matWorld);
-	m_program.SetUniform("worldIT", matWorldIT);
-	m_program.SetUniform("MVP", mvp);
-	m_program.SetUniform("eye_pos", m_camera.GetEye());
-
-	m_program.SetTexture("texImage", 0, cubeColorTextures[CubeColor::YELLOW]);
-
-	driver->draw();
-
-	// shader kikapcsolasa
-	m_program.Off();
 }
 
 void CMyApp::KeyboardDown(SDL_KeyboardEvent &key)
@@ -306,14 +285,15 @@ void CMyApp::DrawAllCubes()
 
 void CMyApp::InitCubePrefabs()
 {
+	// Add lego cubes.
 	for (int r = 1; r <= 2; ++r)
 	{
 		for (int c = 1; c <= 8; ++c)
 		{
 			if (r == 2 && c == 1) continue;
 
-			CubeSize thinCube(r, c, CubeHeight::THIN);
-			CubeSize normalCube(r, c, CubeHeight::NORMAL);
+			CubeSize thinCube(r, c, (int)CubeHeight::THIN);
+			CubeSize normalCube(r, c, (int)CubeHeight::NORMAL);
 
 			cubePrefabs[thinCube] = GeometryFactory::GetLegoCube(r, c, CubeHeight::THIN);
 			cubePrefabs[thinCube]->initBuffers();
@@ -323,6 +303,16 @@ void CMyApp::InitCubePrefabs()
 		}
 	}
 
+	// Add special cubes.
+	CubeSize reflectorSize(1, 1, 6);
+	cubePrefabs[reflectorSize] = GeometryFactory::GetReflector();
+	cubePrefabs[reflectorSize]->initBuffers();
+
+	CubeSize driverSize(3, 2, 10);
+	cubePrefabs[driverSize] = GeometryFactory::GetDriver();
+	cubePrefabs[driverSize]->initBuffers();
+
+	// activeCube = std::make_shared<Cube>(defaultActiveCubePos, cubeColorTextures.begin(), 0.0f, cubePrefabs.begin());
 	activeCube = std::make_shared<Cube>(defaultActiveCubePos, cubeColorTextures.begin(), 0.0f, cubePrefabs.begin());
 }
 
@@ -431,3 +421,46 @@ void CMyApp::PutDownActiveCube()
 	cubes.push_back(activeCube);
 	activeCube = newActiveCube;
 }
+
+void CMyApp::InitSpecialCubePrefabs()
+{
+	CubeSize reflectorSize(1, 1, 7);
+	specialCubePrefabs[reflectorSize] = GeometryFactory::GetDriver();
+	specialCubePrefabs[reflectorSize]->initBuffers();
+
+	/*
+	auto driver = GeometryFactory::GetDriver();
+	specialCubePrefabs[CubeSize(3, 2, 10)] = driver;
+	driver->initBuffers();*/
+}
+
+/*void CMyApp::InitSpecialCubePrefabs()
+{
+	auto outerCylinder = GeometryFactory::GetCylinder(
+		glm::vec3(0.0f, GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit),
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit);
+	outerCylinder->merge(GeometryFactory::GetCircle(
+		glm::vec3(0.0f, GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit),
+		glm::vec3(-1.0f, 0.0f, 0.0f),
+		GeometryFactory::cubeWidthUnit).get());
+	outerCylinder->merge(GeometryFactory::GetCircle(
+		glm::vec3(GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit),
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		GeometryFactory::cubeWidthUnit).get());
+
+	auto innerCylinder = GeometryFactory::GetCylinder(
+		glm::vec3(GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit),
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		0.5f * GeometryFactory::cubeWidthUnit, 0.5f * GeometryFactory::cubeWidthUnit);
+	innerCylinder->merge(GeometryFactory::GetCircle(
+		glm::vec3(GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit),
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		0.5f * GeometryFactory::cubeWidthUnit).get());
+	
+	outerCylinder->initBuffers();
+	innerCylinder->initBuffers();
+
+	specialCubePrefabs[CubeSize(1, 2, 2)] = outerCylinder;
+	specialCubePrefabs[CubeSize(1, 1, 1)] = innerCylinder;
+}*/

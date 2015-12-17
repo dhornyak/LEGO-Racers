@@ -28,3 +28,9 @@ public:
 	float rotation;
 	std::map<CubeSize, std::shared_ptr<Mesh>>::iterator mesh;
 };
+
+class CubeGroup
+{
+public:
+	std::vector<std::shared_ptr<Cube>> cubes;
+};
