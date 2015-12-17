@@ -53,17 +53,29 @@ std::shared_ptr<Mesh> GeometryFactory::GetCircle(glm::vec3 center, glm::vec3 nor
 		float angle = (2 * M_PI / N) * i;
 		glm::vec2 tex(0.25f * cos(angle + M_PI / 2.0f) + 0.5f, 0.25f * sin(angle + M_PI / 2.0f) + 0.5f);
 		
-		if (abs(normal.x) == 1.0f)
+		if (normal.x == 1.0f)
 		{
 			circle->addVertex({ glm::vec3(0.0f, radius * sin(angle), radius * cos(angle)) + center, normal, tex });
 		}
-		else if (abs(normal.y) == 1.0f)
+		else if (normal.x == -1.0f)
+		{
+			circle->addVertex({ glm::vec3(0.0f, radius * cos(angle), radius * sin(angle)) + center, normal, tex });
+		}
+		else if (normal.y == 1.0f)
 		{
 			circle->addVertex({ glm::vec3(radius * cos(angle), 0.0f, radius * sin(angle)) + center, normal, tex });
 		}
-		else if (abs(normal.z) == 1.0f)
+		else if (normal.y == -1.0f)
+		{
+			circle->addVertex({ glm::vec3(radius * sin(angle), 0.0f, radius * cos(angle)) + center, normal, tex });
+		}
+		else if (normal.z == 1.0f)
 		{
 			circle->addVertex({ glm::vec3(radius * sin(angle), radius * cos(angle), 0.0f) + center, normal, tex });
+		}
+		else if (normal.z == -1.0f)
+		{
+			circle->addVertex({ glm::vec3(radius * cos(angle), radius * sin(angle), 0.0f) + center, normal, tex });
 		}
 	}
 
@@ -312,4 +324,33 @@ std::shared_ptr<Mesh> GeometryFactory::GetReflector()
 	reflector->merge(GetSphere(glm::vec3(cubeWidthUnit / 2.0f, 4.5f * thinCubeHeightUnit, cubeWidthUnit), 1.4f * knobRadius).get());
 
 	return reflector;
+}
+
+std::shared_ptr<Mesh> GeometryFactory::GetWheel()
+{
+	// Outer rim.
+	auto wheel = GetCylinder(
+		glm::vec3(0.0f, 1.5f * cubeWidthUnit, 1.5f * cubeWidthUnit),
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		1.5f * cubeWidthUnit, cubeWidthUnit);
+	wheel->merge(GetCircle(
+		glm::vec3(0.0f, 1.5f * cubeWidthUnit, 1.5f * cubeWidthUnit),
+		glm::vec3(-1.0f, 0.0f, 0.0f),
+		1.5f * cubeWidthUnit).get());
+	wheel->merge(GetCircle(
+		glm::vec3(cubeWidthUnit, 1.5f * cubeWidthUnit, 1.5f * cubeWidthUnit),
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		1.5f * cubeWidthUnit).get());
+
+	// Inner rim.
+	wheel->merge(GetCylinder(
+		glm::vec3(cubeWidthUnit, 1.5f * cubeWidthUnit, 1.5f * cubeWidthUnit),
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		1.0f * cubeWidthUnit, 0.2f * cubeWidthUnit).get());
+	wheel->merge(GetCircle(
+		glm::vec3(1.2f * cubeWidthUnit, 1.5f * cubeWidthUnit, 1.5f * cubeWidthUnit),
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		1.0f * cubeWidthUnit).get());
+	
+	return wheel;
 }

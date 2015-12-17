@@ -23,6 +23,7 @@ public:
 	static std::shared_ptr<Mesh> GetDriverTorso(glm::vec3 bottomCenterPosition);
 	static std::shared_ptr<Mesh> GetDriver();
 	static std::shared_ptr<Mesh> GetReflector();
+	static std::shared_ptr<Mesh> GetWheel();
 protected:
 	static const int N;
 

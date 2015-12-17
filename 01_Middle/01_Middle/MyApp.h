@@ -76,7 +76,7 @@ protected:
 	glm::mat4 GetCubeRotationMatrix(std::shared_ptr<Cube> cube);
 	void PutDownActiveCube();
 
-	std::map<CubeSize, std::shared_ptr<Mesh>> specialCubePrefabs;
-	void InitSpecialCubePrefabs();
+	// Special cube identifiers.
+	CubeSize reflectorSize, driverSize, wheelSize;
 };
 

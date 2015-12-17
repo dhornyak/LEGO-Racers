@@ -13,7 +13,7 @@
 #include <algorithm>
 
 CMyApp::CMyApp(void) :
-	defaultActiveCubePos(Position(0, 0, 10))
+	defaultActiveCubePos(Position(0, 0, 10)), reflectorSize(CubeSize(1, 1, 6)), driverSize(CubeSize(3, 2, 10)), wheelSize(CubeSize(3, 1, 8))
 {
 	basePlainTextureID = TextureFromFile("LEGO_logo.jpg");
 }
@@ -26,7 +26,6 @@ bool CMyApp::Init()
 {
 	// Init components.
 	InitTextures();
-	InitSpecialCubePrefabs();
 	InitCubePrefabs();
 	InitCubeZPuffer();
 
@@ -304,13 +303,14 @@ void CMyApp::InitCubePrefabs()
 	}
 
 	// Add special cubes.
-	CubeSize reflectorSize(1, 1, 6);
 	cubePrefabs[reflectorSize] = GeometryFactory::GetReflector();
 	cubePrefabs[reflectorSize]->initBuffers();
 
-	CubeSize driverSize(3, 2, 10);
 	cubePrefabs[driverSize] = GeometryFactory::GetDriver();
 	cubePrefabs[driverSize]->initBuffers();
+
+	cubePrefabs[wheelSize] = GeometryFactory::GetWheel();
+	cubePrefabs[wheelSize]->initBuffers();
 
 	// activeCube = std::make_shared<Cube>(defaultActiveCubePos, cubeColorTextures.begin(), 0.0f, cubePrefabs.begin());
 	activeCube = std::make_shared<Cube>(defaultActiveCubePos, cubeColorTextures.begin(), 0.0f, cubePrefabs.begin());
@@ -420,18 +420,6 @@ void CMyApp::PutDownActiveCube()
 	activeCube->position.height = maxHeight + 1;
 	cubes.push_back(activeCube);
 	activeCube = newActiveCube;
-}
-
-void CMyApp::InitSpecialCubePrefabs()
-{
-	CubeSize reflectorSize(1, 1, 7);
-	specialCubePrefabs[reflectorSize] = GeometryFactory::GetDriver();
-	specialCubePrefabs[reflectorSize]->initBuffers();
-
-	/*
-	auto driver = GeometryFactory::GetDriver();
-	specialCubePrefabs[CubeSize(3, 2, 10)] = driver;
-	driver->initBuffers();*/
 }
 
 /*void CMyApp::InitSpecialCubePrefabs()
