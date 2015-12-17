@@ -28,6 +28,7 @@ bool CMyApp::Init()
 	InitTextures();
 	InitCubePrefabs();
 	InitCubeZPuffer();
+	InitInitialiVehicleParts();
 
 	floor = GeometryFactory::GetLegoCube(floorSize, floorSize, CubeHeight::THIN);
 	floor->initBuffers();
@@ -112,6 +113,7 @@ void CMyApp::Render()
 
 	DrawBasePlain();
 	DrawFloor();
+	DrawInitialVehicleParts();
 	DrawAllCubes();
 	DrawCube(activeCube);
 }
@@ -422,33 +424,70 @@ void CMyApp::PutDownActiveCube()
 	activeCube = newActiveCube;
 }
 
-/*void CMyApp::InitSpecialCubePrefabs()
+void CMyApp::InitInitialiVehicleParts()
 {
-	auto outerCylinder = GeometryFactory::GetCylinder(
-		glm::vec3(0.0f, GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit),
-		glm::vec3(1.0f, 0.0f, 0.0f),
-		GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit);
-	outerCylinder->merge(GeometryFactory::GetCircle(
-		glm::vec3(0.0f, GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit),
-		glm::vec3(-1.0f, 0.0f, 0.0f),
-		GeometryFactory::cubeWidthUnit).get());
-	outerCylinder->merge(GeometryFactory::GetCircle(
-		glm::vec3(GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit),
-		glm::vec3(1.0f, 0.0f, 0.0f),
-		GeometryFactory::cubeWidthUnit).get());
+	chassis = GeometryFactory::GetLegoCube(10, 6, CubeHeight::THIN);
+	chassis->initBuffers();
 
-	auto innerCylinder = GeometryFactory::GetCylinder(
-		glm::vec3(GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit),
-		glm::vec3(1.0f, 0.0f, 0.0f),
-		0.5f * GeometryFactory::cubeWidthUnit, 0.5f * GeometryFactory::cubeWidthUnit);
-	innerCylinder->merge(GeometryFactory::GetCircle(
-		glm::vec3(GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit, GeometryFactory::cubeWidthUnit),
-		glm::vec3(1.0f, 0.0f, 0.0f),
-		0.5f * GeometryFactory::cubeWidthUnit).get());
-	
-	outerCylinder->initBuffers();
-	innerCylinder->initBuffers();
+	wheel = GeometryFactory::GetWheel();
+	wheel->initBuffers();
+}
 
-	specialCubePrefabs[CubeSize(1, 2, 2)] = outerCylinder;
-	specialCubePrefabs[CubeSize(1, 1, 1)] = innerCylinder;
-}*/
+void CMyApp::DrawInitialVehicleParts()
+{
+	// Draw chassis.
+	m_program.On();
+
+	glm::mat4 matWorld =
+		glm::scale<float>(0.1f, 0.1f, 0.1f) *
+		glm::translate<float>(3.0f * -GeometryFactory::cubeWidthUnit, 5.0f * GeometryFactory::thinCubeHeightUnit, 5.0f * -GeometryFactory::cubeWidthUnit);
+
+	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
+	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
+
+	m_program.SetUniform("world", matWorld);
+	m_program.SetUniform("worldIT", matWorldIT);
+	m_program.SetUniform("MVP", mvp);
+	m_program.SetUniform("eye_pos", m_camera.GetEye());
+
+	m_program.SetTexture("texImage", 0, cubeColorTextures.find(CubeColor::BROWN)->second);
+
+	chassis->draw();
+
+	// shader kikapcsolasa
+	m_program.Off();
+
+	// Draw four wheels.
+	std::vector<std::pair<float, glm::vec3>> rot_trans = 
+	{
+		std::pair<float, glm::vec3>(0.0f, glm::vec3(3.0f * GeometryFactory::cubeWidthUnit, GeometryFactory::thinCubeHeightUnit, -5.0f * GeometryFactory::cubeWidthUnit)),
+		std::pair<float, glm::vec3>(0.0f, glm::vec3(3.0f * GeometryFactory::cubeWidthUnit, GeometryFactory::thinCubeHeightUnit, 2.0f * GeometryFactory::cubeWidthUnit)),
+		std::pair<float, glm::vec3>(180.0f, glm::vec3(-3.0f * GeometryFactory::cubeWidthUnit, GeometryFactory::thinCubeHeightUnit, -2.0f * GeometryFactory::cubeWidthUnit)),
+		std::pair<float, glm::vec3>(180.0f, glm::vec3(-3.0f * GeometryFactory::cubeWidthUnit, GeometryFactory::thinCubeHeightUnit, 5.0f * GeometryFactory::cubeWidthUnit))
+	};
+
+	std::for_each(rot_trans.begin(), rot_trans.end(), [this](auto pair)
+	{
+		m_program.On();
+
+		glm::mat4 matWorld =
+			glm::scale<float>(0.1f, 0.1f, 0.1f) *
+			glm::translate<float>(pair.second) *
+			glm::rotate<float>(pair.first, 0, 1, 0);
+
+		glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
+		glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
+
+		m_program.SetUniform("world", matWorld);
+		m_program.SetUniform("worldIT", matWorldIT);
+		m_program.SetUniform("MVP", mvp);
+		m_program.SetUniform("eye_pos", m_camera.GetEye());
+
+		m_program.SetTexture("texImage", 0, cubeColorTextures.find(CubeColor::BLACK)->second);
+
+		wheel->draw();
+
+		// shader kikapcsolasa
+		m_program.Off();
+	});
+}

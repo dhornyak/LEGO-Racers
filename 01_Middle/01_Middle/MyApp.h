@@ -78,5 +78,11 @@ protected:
 
 	// Special cube identifiers.
 	CubeSize reflectorSize, driverSize, wheelSize;
+
+	// Initial vehicle parts.
+	std::shared_ptr<Mesh> wheel = nullptr;
+	std::shared_ptr<Mesh> chassis = nullptr;
+	void InitInitialiVehicleParts();
+	void DrawInitialVehicleParts();
 };
 
