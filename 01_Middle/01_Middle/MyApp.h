@@ -18,6 +18,7 @@
 #include "Mesh_OGL3.h"
 #include "ActiveCube.h"
 #include "CubeSize.h"
+#include "TrackSection.h"
 
 #include <memory>
 #include <map>
@@ -87,5 +88,11 @@ protected:
 	std::shared_ptr<Mesh> chassisMesh = nullptr;
 	void InitInitialiVehicleParts();
 	void DrawInitialVehicleParts();
+
+	// Scene informations.
+	Scene currentScene;
+	Track track;
+	void AssembleTrack();
+	float speed;
 };
 

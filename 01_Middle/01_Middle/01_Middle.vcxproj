@@ -91,6 +91,7 @@
     <ClCompile Include="Mesh_OGL3.cpp" />
     <ClCompile Include="MyApp.cpp" />
     <ClCompile Include="ObjParser_OGL3.cpp" />
+    <ClCompile Include="TrackSection.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ActiveCube.h" />
@@ -104,6 +105,7 @@
     <ClInclude Include="MyApp.h" />
     <ClInclude Include="ObjParser_OGL3.h" />
     <ClInclude Include="Parameters.h" />
+    <ClInclude Include="TrackSection.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="dirLight.frag" />

@@ -14,7 +14,7 @@
 #include <stdlib.h>
 
 CMyApp::CMyApp(void) :
-	defaultActiveCubePos(Position(0, 0, 10)), reflectorSize(CubeSize(1, 1, 6)), driverSize(CubeSize(3, 2, 10)), wheelSize(CubeSize(3, 1, 8)), chassisSize(CubeSize(10, 6, (int)CubeHeight::THIN))
+	defaultActiveCubePos(Position(0, 0, 10)), reflectorSize(CubeSize(1, 1, 6)), driverSize(CubeSize(3, 2, 10)), wheelSize(CubeSize(3, 1, 8)), chassisSize(CubeSize(10, 6, (int)CubeHeight::THIN)), speed(3.0f)
 {
 	basePlainTextureID = TextureFromFile("LEGO_logo.jpg");
 }
@@ -31,6 +31,12 @@ bool CMyApp::Init()
 	InitCubeZPuffer();
 	InitInitialiVehicleParts();
 	PrintCubeZPuffer();
+
+	currentScene = Scene::EDITING;
+
+	// Create track.
+	AssembleTrack();
+	// track.InitTrack();
 
 	floor = GeometryFactory::GetLegoCube(floorSize, floorSize, CubeHeight::THIN);
 	floor->initBuffers();
@@ -106,6 +112,12 @@ void CMyApp::Update()
 	m_camera.Update(delta_time);
 
 	last_time = SDL_GetTicks();
+
+	if (track.IsInitialized())
+	{
+		glm::vec3 currentPos = track.GetPosition(speed);
+		std::cout << currentPos.x << " " << currentPos.y << " " << currentPos.z << std::endl;
+	}
 }
 
 void CMyApp::Render()
@@ -113,11 +125,24 @@ void CMyApp::Render()
 	// töröljük a frampuffert (GL_COLOR_BUFFER_BIT) és a mélységi Z puffert (GL_DEPTH_BUFFER_BIT)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	DrawBasePlain();
-	DrawFloor();
-	//DrawInitialVehicleParts();
-	DrawAllCubes();
-	DrawCube(activeCube);
+	switch (currentScene)
+	{
+	case Scene::EDITING:
+		DrawBasePlain();
+		DrawFloor();
+		DrawInitialVehicleParts();
+		DrawAllCubes();
+		DrawCube(activeCube);
+		break;
+	case Scene::RACING:
+		DrawInitialVehicleParts();
+		DrawAllCubes();
+		break;
+	case Scene::FINISH:
+		break;
+	default:
+		break;
+	}
 }
 
 void CMyApp::KeyboardDown(SDL_KeyboardEvent &key)
@@ -174,13 +199,26 @@ void CMyApp::KeyboardDown(SDL_KeyboardEvent &key)
 			activeCube->color = cubeColorTextures.begin();
 		}
 		break;
-	case SDLK_KP_ENTER: // unused
+	case SDLK_KP_ENTER:
+		switch (currentScene)
+		{
+		case Scene::EDITING: currentScene = Scene::RACING;
+			break;
+		case Scene::RACING: currentScene = Scene::EDITING;
+			break;
+		case Scene::FINISH: currentScene = Scene::EDITING;
+			break;
+		default:
+			break;
+		}
 		break;
 	case SDLK_BACKSPACE:
 		if (cubes.size() > 0)
 		{
 			cubes.pop_back();
 		}
+	case SDLK_SPACE:
+		track.InitTrack();
 	default:
 		break;
 	}
@@ -427,7 +465,7 @@ void CMyApp::PutDownActiveCube()
 			zPufferRowInd = r + halfFloorSize; zPufferColInd = c + halfFloorSize;
 			int currentZ = cubeZPuffer[zPufferRowInd][zPufferColInd];
 			
-			if (currentZ >= activeCube->position.height) return;
+			if (currentZ >= activeCube->position.height || currentZ < 0) return;
 
 			if (currentZ > maxHeight) maxHeight = currentZ;
 		}
@@ -435,17 +473,14 @@ void CMyApp::PutDownActiveCube()
 
 	// Update Z puffer with dimensions of the active cube.
 	// std::cout << "Putting down active cube to height " << maxHeight + 1 << std::endl;
+	int valueToAdd = (int)activeCube->mesh->first.height;
 
-	/*for (int r = activeCube->position.row; r < activeCube->position.row + cubeRowNum; ++r)
+	if (activeCube->mesh->first == wheelSize || activeCube->mesh->first == driverSize || activeCube->mesh->first == reflectorSize)
 	{
-		for (int c = activeCube->position.col; c < activeCube->position.col + cubeColNum; ++c)
-		{
-			zPufferRowInd = r + halfFloorSize; zPufferColInd = c + halfFloorSize;
-			cubeZPuffer[zPufferRowInd][zPufferColInd] += (int)activeCube->mesh->first.height;
-		}
-	}*/
+		valueToAdd = -(maxHeight + 1);
+	}
 
-	UpdateCubeZPuffer(activeCube->position.row, activeCube->position.col, cubeRowNum, cubeColNum, (int)activeCube->mesh->first.height);
+	UpdateCubeZPuffer(activeCube->position.row + halfFloorSize, activeCube->position.col + halfFloorSize, cubeRowNum, cubeColNum, valueToAdd);
 
 	// Store active cube and get a new one.
 	auto newActiveCube = std::make_shared<Cube>(defaultActiveCubePos, activeCube->color, 0.0f, activeCube->mesh);
@@ -454,7 +489,7 @@ void CMyApp::PutDownActiveCube()
 	activeCube = newActiveCube;
 
 	// Print Z-puffer to console.
-	
+	PrintCubeZPuffer();
 }
 
 void CMyApp::InitInitialiVehicleParts()
@@ -534,4 +569,30 @@ void CMyApp::DrawInitialVehicleParts()
 		// shader kikapcsolasa
 		m_program.Off();
 	});
+}
+
+void CMyApp::AssembleTrack()
+{
+	// track.sections.push_back(std::make_shared<Line>(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(6.0f, 0.0f, 0.0f), Line::Orientation::HORIZONTAL, TrackSection::Direction::PLUS));
+	// track.sections.push_back(std::make_shared<Line>(glm::vec3(6.0f, 0.0f, 0.0f), glm::vec3(12.0f, 0.0f, 0.0f), Line::Orientation::HORIZONTAL, TrackSection::Direction::PLUS));
+
+	// track.sections.push_back(std::make_shared<Line>(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(6.0f, 0.0f, 0.0f), Line::Orientation::HORIZONTAL, TrackSection::Direction::PLUS));
+	// track.sections.push_back(std::make_shared<Line>(glm::vec3(6.0f, 0.0f, 0.0f), glm::vec3(6.0f, 0.0f, 6.0f), Line::Orientation::VERTICAL, TrackSection::Direction::PLUS));
+	// track.sections.push_back(std::make_shared<Line>(glm::vec3(6.0f, 0.0f, 6.0f), glm::vec3(-6.0f, 0.0f, 6.0f), Line::Orientation::HORIZONTAL, TrackSection::Direction::MINUS));
+	// track.sections.push_back(std::make_shared<Line>(glm::vec3(-6.0f, 0.0f, 6.0f), glm::vec3(-6.0f, 0.0f, 0.0f), Line::Orientation::VERTICAL, TrackSection::Direction::MINUS));
+
+	// track.sections.push_back(std::make_shared<Line>(glm::vec3(0.0f, 0.0f, -6.0f), glm::vec3(-6.0f, 0.0f, -6.0f), Line::Orientation::HORIZONTAL, TrackSection::Direction::MINUS));
+	// track.sections.push_back(std::make_shared<Line>(glm::vec3(-6.0f, 0.0f, -6.0f), glm::vec3(-6.0f, 0.0f, 6.0f), Line::Orientation::VERTICAL, TrackSection::Direction::PLUS));
+	// track.sections.push_back(std::make_shared<Line>(glm::vec3(-6.0f, 0.0f, 6.0f), glm::vec3(6.0f, 0.0f, 6.0f), Line::Orientation::HORIZONTAL, TrackSection::Direction::PLUS));
+	// track.sections.push_back(std::make_shared<Line>(glm::vec3(6.0f, 0.0f, 6.0f), glm::vec3(6.0f, 0.0f, -6.0f), Line::Orientation::VERTICAL, TrackSection::Direction::MINUS));
+
+	// track.sections.push_back(std::make_shared<Corner>(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, 1, TrackSection::Direction::PLUS));
+	// track.sections.push_back(std::make_shared<Corner>(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, 2, TrackSection::Direction::PLUS));
+	// track.sections.push_back(std::make_shared<Corner>(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, 3, TrackSection::Direction::PLUS));
+	// track.sections.push_back(std::make_shared<Corner>(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, 4, TrackSection::Direction::PLUS));
+
+	// track.sections.push_back(std::make_shared<Corner>(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, 4, TrackSection::Direction::MINUS));
+	// track.sections.push_back(std::make_shared<Corner>(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, 3, TrackSection::Direction::MINUS));
+	// track.sections.push_back(std::make_shared<Corner>(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, 2, TrackSection::Direction::MINUS));
+	// track.sections.push_back(std::make_shared<Corner>(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f, 1, TrackSection::Direction::MINUS));
 }

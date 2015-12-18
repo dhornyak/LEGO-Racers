@@ -17,6 +17,11 @@ public:
 			(rows == rhs.rows && cols == rhs.cols && height < rhs.height);
 	}
 
+	bool operator==(const CubeSize &rhs) const
+	{
+		return (rows == rhs.rows && cols == rhs.cols && height == rhs.height);
+	}
+
 	int rows;
 	int cols;
 	int height;
