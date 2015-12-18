@@ -72,16 +72,19 @@ protected:
 
 	int cubeZPuffer[floorSize][floorSize];
 	void InitCubeZPuffer();
+	void UpdateCubeZPuffer(int topLeftRow, int topLeftCol, int rowNum, int colNum, int valueToAdd);
+	void PrintCubeZPuffer();
 
 	glm::mat4 GetCubeRotationMatrix(std::shared_ptr<Cube> cube);
 	void PutDownActiveCube();
 
 	// Special cube identifiers.
-	CubeSize reflectorSize, driverSize, wheelSize;
+	CubeSize reflectorSize, driverSize, wheelSize, chassisSize;
+	const int chassisHeight = 5;
 
 	// Initial vehicle parts.
-	std::shared_ptr<Mesh> wheel = nullptr;
-	std::shared_ptr<Mesh> chassis = nullptr;
+	std::shared_ptr<Mesh> wheelMesh = nullptr;
+	std::shared_ptr<Mesh> chassisMesh = nullptr;
 	void InitInitialiVehicleParts();
 	void DrawInitialVehicleParts();
 };

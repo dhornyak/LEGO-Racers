@@ -11,9 +11,10 @@
 #include "CubeSize.h"
 #include "Parameters.h"
 #include <algorithm>
+#include <stdlib.h>
 
 CMyApp::CMyApp(void) :
-	defaultActiveCubePos(Position(0, 0, 10)), reflectorSize(CubeSize(1, 1, 6)), driverSize(CubeSize(3, 2, 10)), wheelSize(CubeSize(3, 1, 8))
+	defaultActiveCubePos(Position(0, 0, 10)), reflectorSize(CubeSize(1, 1, 6)), driverSize(CubeSize(3, 2, 10)), wheelSize(CubeSize(3, 1, 8)), chassisSize(CubeSize(10, 6, (int)CubeHeight::THIN))
 {
 	basePlainTextureID = TextureFromFile("LEGO_logo.jpg");
 }
@@ -29,6 +30,7 @@ bool CMyApp::Init()
 	InitCubePrefabs();
 	InitCubeZPuffer();
 	InitInitialiVehicleParts();
+	PrintCubeZPuffer();
 
 	floor = GeometryFactory::GetLegoCube(floorSize, floorSize, CubeHeight::THIN);
 	floor->initBuffers();
@@ -113,7 +115,7 @@ void CMyApp::Render()
 
 	DrawBasePlain();
 	DrawFloor();
-	DrawInitialVehicleParts();
+	//DrawInitialVehicleParts();
 	DrawAllCubes();
 	DrawCube(activeCube);
 }
@@ -350,6 +352,32 @@ void CMyApp::InitCubeZPuffer()
 	}
 }
 
+void CMyApp::UpdateCubeZPuffer(int topLeftRow, int topLeftCol, int rowNum, int colNum, int valueToAdd)
+{
+	for (int r = topLeftRow; r < topLeftRow + rowNum; ++r)
+	{
+		for (int c = topLeftCol; c < topLeftCol + colNum; ++c)
+		{
+			cubeZPuffer[r][c] += valueToAdd;
+		}
+	}
+}
+
+void CMyApp::PrintCubeZPuffer()
+{
+	system("cls");
+
+	for (int r = 0; r < floorSize; ++r)
+	{
+		for (int c = 0; c < floorSize; ++c)
+		{
+			if (cubeZPuffer[r][c] >= 0) std::cout << " " << cubeZPuffer[r][c] << " ";
+			else std::cout << "-" << abs(cubeZPuffer[r][c]) << " ";
+		}
+		std::cout << std::endl;
+	}
+}
+
 glm::mat4 CMyApp::GetCubeRotationMatrix(std::shared_ptr<Cube> cube)
 {
 	auto rot_tr = 
@@ -406,31 +434,47 @@ void CMyApp::PutDownActiveCube()
 	}
 
 	// Update Z puffer with dimensions of the active cube.
-	std::cout << "Putting down active cube to height " << maxHeight + 1 << std::endl;
+	// std::cout << "Putting down active cube to height " << maxHeight + 1 << std::endl;
 
-	for (int r = activeCube->position.row; r < activeCube->position.row + cubeRowNum; ++r)
+	/*for (int r = activeCube->position.row; r < activeCube->position.row + cubeRowNum; ++r)
 	{
 		for (int c = activeCube->position.col; c < activeCube->position.col + cubeColNum; ++c)
 		{
 			zPufferRowInd = r + halfFloorSize; zPufferColInd = c + halfFloorSize;
 			cubeZPuffer[zPufferRowInd][zPufferColInd] += (int)activeCube->mesh->first.height;
 		}
-	}
+	}*/
+
+	UpdateCubeZPuffer(activeCube->position.row, activeCube->position.col, cubeRowNum, cubeColNum, (int)activeCube->mesh->first.height);
 
 	// Store active cube and get a new one.
 	auto newActiveCube = std::make_shared<Cube>(defaultActiveCubePos, activeCube->color, 0.0f, activeCube->mesh);
 	activeCube->position.height = maxHeight + 1;
 	cubes.push_back(activeCube);
 	activeCube = newActiveCube;
+
+	// Print Z-puffer to console.
+	
 }
 
 void CMyApp::InitInitialiVehicleParts()
 {
-	chassis = GeometryFactory::GetLegoCube(10, 6, CubeHeight::THIN);
-	chassis->initBuffers();
+	chassisMesh = GeometryFactory::GetLegoCube(chassisSize.rows, chassisSize.cols, (CubeHeight)chassisSize.height);
+	chassisMesh->initBuffers();
 
-	wheel = GeometryFactory::GetWheel();
-	wheel->initBuffers();
+	wheelMesh = GeometryFactory::GetWheel();
+	wheelMesh->initBuffers();
+
+	// Init Z-puffer for these elements.
+	// chassis
+	UpdateCubeZPuffer(halfFloorSize - chassisSize.rows / 2, halfFloorSize - chassisSize.cols / 2, chassisSize.rows, chassisSize.cols, chassisHeight);
+
+	// wheels
+	UpdateCubeZPuffer(halfFloorSize - chassisSize.rows / 2, halfFloorSize + chassisSize.cols / 2, wheelSize.rows, wheelSize.cols, -1);
+	UpdateCubeZPuffer(halfFloorSize - chassisSize.rows / 2, halfFloorSize - chassisSize.cols / 2 - 1, wheelSize.rows, wheelSize.cols, -1);
+
+	UpdateCubeZPuffer(halfFloorSize + chassisSize.rows / 2 - wheelSize.rows, halfFloorSize + chassisSize.cols / 2, wheelSize.rows, wheelSize.cols, -1);
+	UpdateCubeZPuffer(halfFloorSize + chassisSize.rows / 2 - wheelSize.rows, halfFloorSize - chassisSize.cols / 2 - 1, wheelSize.rows, wheelSize.cols, -1);
 }
 
 void CMyApp::DrawInitialVehicleParts()
@@ -452,7 +496,7 @@ void CMyApp::DrawInitialVehicleParts()
 
 	m_program.SetTexture("texImage", 0, cubeColorTextures.find(CubeColor::BROWN)->second);
 
-	chassis->draw();
+	chassisMesh->draw();
 
 	// shader kikapcsolasa
 	m_program.Off();
@@ -485,7 +529,7 @@ void CMyApp::DrawInitialVehicleParts()
 
 		m_program.SetTexture("texImage", 0, cubeColorTextures.find(CubeColor::BLACK)->second);
 
-		wheel->draw();
+		wheelMesh->draw();
 
 		// shader kikapcsolasa
 		m_program.Off();
