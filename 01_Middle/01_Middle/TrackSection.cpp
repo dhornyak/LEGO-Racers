@@ -243,7 +243,11 @@ glm::vec3 Track::GetPosition(float speed)
 				result = sections[currentSection]->UpdatePosition(timeElapsed, speed);
 				previousCalculation = currentTick;
 				return result.position;
-			}	
+			}
+			else
+			{
+				isFinished = true;
+			}
 		}
 
 		previousCalculation = currentTick;

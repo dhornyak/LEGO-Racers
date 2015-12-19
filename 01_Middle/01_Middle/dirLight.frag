@@ -11,6 +11,8 @@ out vec4 fs_out_col;
 // színtér tulajdonságok
 uniform vec3 eye_pos;
 uniform int light;
+uniform float periodical_multiplier;
+uniform vec3 car_position;
 
 // fénytulajdonságok
 vec3 light_pos, toLight;
@@ -18,7 +20,7 @@ vec4 La, Ld, Ls;
 
 // anyagtulajdonságok
 vec4 Ka, Kd, Ks;
-float specular_power;
+float specular_power = 16.0f;
 
 uniform sampler2D texImage;
 
@@ -42,7 +44,6 @@ void main()
 		Ka = vec4(1, 1, 1, 1);
 		Kd = vec4(0.75f, 0.75f, 0.75f, 1);
 		Ks = vec4(1, 1, 1, 1);
-		specular_power = 16;
 	}
 	else if (light == 2)
 	{
@@ -58,7 +59,6 @@ void main()
 		Ka = vec4(1, 1, 1, 1);
 		Kd = vec4(0.75f, 0.75f, 0.75f, 1);
 		Ks = vec4(1, 1, 1, 1);
-		specular_power = 16;
 	}
 	else if (light == 3)
 	{
@@ -80,17 +80,18 @@ void main()
 	{
 		// LightOptions::FINISH
 
-		light_pos = vec3( 0, 15, 15 );
+		light_pos = car_position;
+		light_pos.y += 5.0f;
 		toLight = normalize(light_pos - vs_out_pos);
 
-		La = vec4(0.5f, 0.5f, 0.5f, 1);
+		La = vec4(0.2f, 0.2f, 0.2f, 1);
 		Ld = vec4(0.5f, 0.5f, 0.5f, 1);
 		Ls = vec4(1, 0, 0, 1);
 
 		Ka = vec4(1, 1, 1, 1);
 		Kd = vec4(0.75f, 0.75f, 0.75f, 1);
 		Ks = vec4(1, 1, 1, 1);
-		specular_power = 16;
+		specular_power = 8.0f * periodical_multiplier;
 	}
 
 	//

@@ -111,5 +111,7 @@ protected:
 	// Lights.
 	LightOptions light;
 	bool racingInDayLight;
+	GLuint changingStarted;
+	float periodicalMultiplier;
 };
 

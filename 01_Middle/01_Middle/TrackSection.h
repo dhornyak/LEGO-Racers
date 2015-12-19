@@ -107,8 +107,10 @@ public:
 	float GetDriveDirection() const;
 	float GetCubeDirection() const;
 	bool IsInitialized() const { return isInitialized; }
+	bool IsFinished() const { return isFinished; }
 private:
 	int currentSection;
 	float previousCalculation;
 	bool isInitialized = false;
+	bool isFinished = false;
 };

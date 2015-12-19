@@ -14,11 +14,11 @@
 #include <stdlib.h>
 
 CMyApp::CMyApp(void) :
-	defaultActiveCubePos(Position(0, 0, 10)), 
-	reflectorSize(CubeSize(1, 1, 6)), 
-	driverSize(CubeSize(3, 2, 10)), 
-	wheelSize(CubeSize(3, 1, 8)), 
-	chassisSize(CubeSize(10, 6, (int)CubeHeight::THIN)), 
+	defaultActiveCubePos(Position(0, 0, 10)),
+	reflectorSize(CubeSize(1, 1, 6)),
+	driverSize(CubeSize(3, 2, 10)),
+	wheelSize(CubeSize(3, 1, 8)),
+	chassisSize(CubeSize(10, 6, (int)CubeHeight::THIN)),
 	speed(10.0f),
 	driverPlaced(false),
 	racingInDayLight(true)
@@ -130,11 +130,11 @@ void CMyApp::Update()
 
 	last_time = SDL_GetTicks();
 
-	if (currentScene == Scene::EDITING)
+	switch (currentScene)
 	{
-		light = LightOptions::EDITING;
-	}
-	if (currentScene == Scene::RACING)
+	case Scene::EDITING: light = LightOptions::EDITING;
+		break;
+	case Scene::RACING:
 	{
 		// Set light.
 		light = (racingInDayLight) ? LightOptions::RACING_DAY : LightOptions::RACING_NIGHT;
@@ -143,9 +143,28 @@ void CMyApp::Update()
 		{
 			// Update camera and car position/direction.
 			carPosition = track.GetPosition(speed);
+
+			if (track.IsFinished())
+			{
+				currentScene = Scene::FINISH;
+				changingStarted = SDL_GetTicks();
+			}
+
 			driveDirection = track.GetDriveDirection();
 			cubeDirection = track.GetCubeDirection();
-		}	
+		}
+	}
+		break;
+	case Scene::FINISH:
+	{
+		light = LightOptions::FINISH;
+
+		float sin_multiplier = sinf((SDL_GetTicks() - changingStarted) / 1000.0f * M_PI);
+		periodicalMultiplier = (((sin_multiplier - (-1.0f)) * (4.0f - 0.25f)) / (1.0f - (-1.0f))) + 0.25f;
+	}
+		break;
+	default:
+		break;
 	}
 }
 
@@ -163,12 +182,11 @@ void CMyApp::Render()
 		DrawAllCubes();
 		DrawCube(activeCube);
 		break;
+	case Scene::FINISH:
 	case Scene::RACING:
 		DrawInitialVehicleParts();
 		DrawAllCubes(true);
 		DrawTrack();
-		break;
-	case Scene::FINISH:
 		break;
 	default:
 		break;
@@ -652,7 +670,7 @@ void CMyApp::DrawCube(std::shared_ptr<Cube> cube)
 
 	glm::mat4 matWorld = glm::scale<float>(0.1f, 0.1f, 0.1f);
 
-	if (currentScene == Scene::RACING)
+	if (currentScene == Scene::RACING || currentScene == Scene::FINISH)
 	{
 		matWorld *= glm::translate<float>(carPosition) * glm::rotate<float>(cubeDirection, 0, 1, 0);
 	}
@@ -668,6 +686,8 @@ void CMyApp::DrawCube(std::shared_ptr<Cube> cube)
 	m_program.SetUniform("MVP", mvp);
 	m_program.SetUniform("eye_pos", m_camera.GetEye());
 	m_program.SetUniform("light", (int)light);
+	m_program.SetUniform("car_position", carPosition);
+	m_program.SetUniform("periodical_multiplier", periodicalMultiplier);
 
 	m_program.SetTexture("texImage", 0, cube->color->second);
 
@@ -738,6 +758,8 @@ void CMyApp::DrawInitialVehicleParts()
 	m_program.SetUniform("MVP", mvp);
 	m_program.SetUniform("eye_pos", m_camera.GetEye());
 	m_program.SetUniform("light", (int)light);
+	m_program.SetUniform("car_position", carPosition);
+	m_program.SetUniform("periodical_multiplier", periodicalMultiplier);
 
 	m_program.SetTexture("texImage", 0, cubeColorTextures.find(CubeColor::BROWN)->second);
 
@@ -808,6 +830,8 @@ void CMyApp::DrawTrack()
 		m_program.SetUniform("MVP", mvp);
 		m_program.SetUniform("eye_pos", m_camera.GetEye());
 		m_program.SetUniform("light", (int)light);
+		m_program.SetUniform("car_position", carPosition);
+		m_program.SetUniform("periodical_multiplier", periodicalMultiplier);
 
 		m_program.SetTexture("texImage", 0, asphaltTextureID);
 
