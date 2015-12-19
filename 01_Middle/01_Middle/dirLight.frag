@@ -8,28 +8,91 @@ in vec2 vs_out_tex0;
 // kimenõ érték - a fragment színe
 out vec4 fs_out_col;
 
-//
-// uniform változók
-//
-
 // színtér tulajdonságok
-uniform vec3 eye_pos = vec3(0, 50, 50);
+uniform vec3 eye_pos;
+uniform int light;
 
 // fénytulajdonságok
-uniform vec3 light_pos = vec3( 0, 15, 15 );
-uniform vec4 La = vec4(0.5f, 0.5f, 0.5f, 1);
-uniform vec4 Ld = vec4(0.5f, 0.5f, 0.5f, 1);
-uniform vec4 Ls = vec4(1, 1, 1, 1);
+vec3 light_pos, toLight;
+vec4 La, Ld, Ls;
 
 // anyagtulajdonságok
-uniform vec4 Ka = vec4(1, 1, 1, 1);
-uniform vec4 Kd = vec4(0.75f, 0.75f, 0.75f, 1);
-uniform vec4 Ks = vec4(1, 1, 1, 1);
-uniform float specular_power = 16;
+vec4 Ka, Kd, Ks;
+float specular_power;
+
 uniform sampler2D texImage;
 
 void main()
 {
+	//
+	// Set light options.
+	//
+
+	if (light == 1)
+	{
+		// LightOptions::EDITING
+
+		light_pos = vec3( 0, 15, 15 );
+		toLight = normalize(light_pos - vs_out_pos);
+
+		La = vec4(0.5f, 0.5f, 0.5f, 1);
+		Ld = vec4(0.5f, 0.5f, 0.5f, 1);
+		Ls = vec4(1, 1, 1, 1);
+
+		Ka = vec4(1, 1, 1, 1);
+		Kd = vec4(0.75f, 0.75f, 0.75f, 1);
+		Ks = vec4(1, 1, 1, 1);
+		specular_power = 16;
+	}
+	else if (light == 2)
+	{
+		// LightOptions::RACING_DAY
+
+		light_pos = vec3( 0, 15, 15 );
+		toLight = vec3(-1, 1, 0);
+
+		La = vec4(0.5f, 0.5f, 0.5f, 1);
+		Ld = vec4(0.5f, 0.5f, 0.5f, 1);
+		Ls = vec4(1, 1, 0, 1);
+
+		Ka = vec4(1, 1, 1, 1);
+		Kd = vec4(0.75f, 0.75f, 0.75f, 1);
+		Ks = vec4(1, 1, 1, 1);
+		specular_power = 16;
+	}
+	else if (light == 3)
+	{
+		// LightOptions::RACING_NIGHT
+
+		light_pos = vec3( 0, 15, -30 );
+		toLight = normalize(light_pos - vs_out_pos);
+
+		La = vec4(0.1f, 0.1f, 0.1f, 1);
+		Ld = vec4(0.7f, 0.7f, 0.7f, 1);
+		Ls = vec4(0, 1, 1, 1);
+
+		Ka = vec4(1, 1, 1, 1);
+		Kd = vec4(0.75f, 0.75f, 0.75f, 1);
+		Ks = vec4(1, 1, 1, 1);
+		specular_power = 2;
+	}
+	else if (light == 4)
+	{
+		// LightOptions::FINISH
+
+		light_pos = vec3( 0, 15, 15 );
+		toLight = normalize(light_pos - vs_out_pos);
+
+		La = vec4(0.5f, 0.5f, 0.5f, 1);
+		Ld = vec4(0.5f, 0.5f, 0.5f, 1);
+		Ls = vec4(1, 0, 0, 1);
+
+		Ka = vec4(1, 1, 1, 1);
+		Kd = vec4(0.75f, 0.75f, 0.75f, 1);
+		Ks = vec4(1, 1, 1, 1);
+		specular_power = 16;
+	}
+
 	//
 	// ambiens szín számítása
 	//
@@ -45,7 +108,7 @@ void main()
 	    - clamp: http://www.opengl.org/sdk/docs/manglsl/xhtml/clamp.xml
 	*/
 	vec3 normal = normalize( vs_out_normal );
-	vec3 toLight = normalize(light_pos - vs_out_pos);
+	// vec3 toLight = normalize(light_pos - vs_out_pos);
 	float di = clamp( dot( toLight, normal), 0.0f, 1.0f );
 	vec4 diffuse = Ld*Kd*di;
 

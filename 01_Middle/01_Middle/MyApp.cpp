@@ -20,7 +20,8 @@ CMyApp::CMyApp(void) :
 	wheelSize(CubeSize(3, 1, 8)), 
 	chassisSize(CubeSize(10, 6, (int)CubeHeight::THIN)), 
 	speed(10.0f),
-	driverPlaced(false)
+	driverPlaced(false),
+	racingInDayLight(true)
 {
 	basePlainTextureID = TextureFromFile("LEGO_logo.jpg");
 	asphaltTextureID = TextureFromFile("asphalt.jpg");
@@ -29,6 +30,10 @@ CMyApp::CMyApp(void) :
 CMyApp::~CMyApp(void)
 {
 }
+
+///////////////////////////
+// GRAPHICAL CYCLE.
+///////////////////////////
 
 bool CMyApp::Init()
 {
@@ -40,6 +45,7 @@ bool CMyApp::Init()
 	PrintCubeZPuffer();
 
 	currentScene = Scene::EDITING;
+	light = LightOptions::EDITING;
 
 	// Create track.
 	AssembleTrack();
@@ -124,12 +130,22 @@ void CMyApp::Update()
 
 	last_time = SDL_GetTicks();
 
-	if (currentScene == Scene::RACING && raceStarted)
+	if (currentScene == Scene::EDITING)
 	{
-		// Update camera and car position/direction.
-		carPosition = track.GetPosition(speed);
-		driveDirection = track.GetDriveDirection();
-		cubeDirection = track.GetCubeDirection();
+		light = LightOptions::EDITING;
+	}
+	if (currentScene == Scene::RACING)
+	{
+		// Set light.
+		light = (racingInDayLight) ? LightOptions::RACING_DAY : LightOptions::RACING_NIGHT;
+
+		if (raceStarted)
+		{
+			// Update camera and car position/direction.
+			carPosition = track.GetPosition(speed);
+			driveDirection = track.GetDriveDirection();
+			cubeDirection = track.GetCubeDirection();
+		}	
 	}
 }
 
@@ -250,6 +266,12 @@ void CMyApp::KeyboardDown(SDL_KeyboardEvent &key)
 			std::cout << "speed: " << speed << std::endl;
 		}
 		break;
+	case SDLK_SPACE:
+		if (currentScene == Scene::RACING)
+		{
+			racingInDayLight = !racingInDayLight;
+		}
+		break;
 	default:
 		break;
 	}
@@ -272,105 +294,9 @@ void CMyApp::Resize(int _w, int _h)
 	m_camera.Resize(_w, _h);
 }
 
-void CMyApp::DrawBasePlain()
-{
-	m_program.On();
-
-	glm::mat4 matWorld = glm::mat4(1.0f);
-	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
-	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
-
-	m_program.SetUniform("world", matWorld);
-	m_program.SetUniform("worldIT", matWorldIT);
-	m_program.SetUniform("MVP", mvp);
-	m_program.SetUniform("eye_pos", m_camera.GetEye());
-
-	m_program.SetTexture("texImage", 0, basePlainTextureID);
-
-	// kapcsoljuk be a VAO-t (a VBO jön vele együtt)
-	m_vb.On();
-
-	m_vb.DrawIndexed(GL_TRIANGLES, 0, 6, 0);
-
-	m_vb.Off();
-
-	// shader kikapcsolasa
-	m_program.Off();
-}
-
-void CMyApp::DrawFloor()
-{
-	m_program.On();
-
-	glm::mat4 matWorld =
-		glm::scale<float>(0.1f, 0.1f, 0.1f) *
-		glm::translate<float>(floorSize / 2 * -GeometryFactory::cubeWidthUnit, 0.0f, floorSize / 2 * -GeometryFactory::cubeWidthUnit);
-
-	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
-	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
-
-	m_program.SetUniform("world", matWorld);
-	m_program.SetUniform("worldIT", matWorldIT);
-	m_program.SetUniform("MVP", mvp);
-	m_program.SetUniform("eye_pos", m_camera.GetEye());
-
-	m_program.SetTexture("texImage", 0, floorTextureID);
-
-	floor->draw();
-
-	// shader kikapcsolasa
-	m_program.Off();
-}
-
-void CMyApp::DrawCube(std::shared_ptr<Cube> cube)
-{
-	m_program.On();
-
-	glm::mat4 matWorld = glm::scale<float>(0.1f, 0.1f, 0.1f);
-		
-	if (currentScene == Scene::RACING)
-	{
-		matWorld *= glm::translate<float>(carPosition) * glm::rotate<float>(cubeDirection, 0, 1, 0);
-	}
-
-	matWorld *= glm::translate<float>(cube->position.col * GeometryFactory::cubeWidthUnit, cube->position.height * GeometryFactory::thinCubeHeightUnit, cube->position.row * GeometryFactory::cubeWidthUnit) *
-				GetCubeRotationMatrix(cube);
-
-	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
-	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
-
-	m_program.SetUniform("world", matWorld);
-	m_program.SetUniform("worldIT", matWorldIT);
-	m_program.SetUniform("MVP", mvp);
-	m_program.SetUniform("eye_pos", m_camera.GetEye());
-
-	m_program.SetTexture("texImage", 0, cube->color->second);
-
-	cubePrefabs[cube->mesh->first]->draw();
-
-	// shader kikapcsolasa
-	m_program.Off();
-}
-
-void CMyApp::DrawAllCubes(bool filterOuterCubes)
-{
-	std::for_each(cubes.begin(), cubes.end(), [this, filterOuterCubes](auto cube)
-	{
-		if (filterOuterCubes)
-		{
-			if (
-				(cube->position.row >= -chassisSize.rows / 2 && cube->position.row < chassisSize.rows / 2) &&
-				(cube->position.col >= -chassisSize.cols / 2 && cube->position.col < chassisSize.cols / 2))
-			{
-				DrawCube(cube);
-			}
-		}
-		else
-		{
-			DrawCube(cube);
-		}
-	});
-}
+////////////////////////////////////
+// GRAPHIC COMPONENT INITIALIZERS.
+////////////////////////////////////
 
 void CMyApp::InitCubePrefabs()
 {
@@ -419,137 +345,6 @@ void CMyApp::InitTextures()
 	cubeColorTextures[CubeColor::PEACH] = TextureFromFile("peach.png");
 }
 
-void CMyApp::DeleteTextures()
-{
-	std::for_each(cubeColorTextures.begin(), cubeColorTextures.end(), [](auto kvpair)
-	{
-		glDeleteTextures(1, &kvpair.second);
-	});
-}
-
-void CMyApp::InitCubeZPuffer()
-{
-	for (int r = 0; r < floorSize; ++r)
-	{
-		for (int c = 0; c < floorSize; ++c)
-		{
-			cubeZPuffer[r][c] = 0;
-		}
-	}
-}
-
-void CMyApp::UpdateCubeZPuffer(int topLeftRow, int topLeftCol, int rowNum, int colNum, int valueToAdd)
-{
-	for (int r = topLeftRow; r < topLeftRow + rowNum; ++r)
-	{
-		for (int c = topLeftCol; c < topLeftCol + colNum; ++c)
-		{
-			cubeZPuffer[r][c] += valueToAdd;
-		}
-	}
-}
-
-void CMyApp::PrintCubeZPuffer()
-{
-	system("cls");
-
-	for (int r = 0; r < floorSize; ++r)
-	{
-		for (int c = 0; c < floorSize; ++c)
-		{
-			if (cubeZPuffer[r][c] >= 0) std::cout << " " << cubeZPuffer[r][c] << " ";
-			else std::cout << "-" << abs(cubeZPuffer[r][c]) << " ";
-		}
-		std::cout << std::endl;
-	}
-}
-
-glm::mat4 CMyApp::GetCubeRotationMatrix(std::shared_ptr<Cube> cube)
-{
-	auto rot_tr = 
-		glm::rotate<float>(cube->rotation, 0.0f, 1.0f, 0.0f) *
-		glm::translate<float>(cube->mesh->first.cols * -GeometryFactory::cubeWidthUnit / 2.0, 0.0f, cube->mesh->first.rows * -GeometryFactory::cubeWidthUnit / 2.0f);
-
-	if (fmod(cube->rotation, 180.f) == 0.0f)
-	{
-		return
-			glm::translate<float>(cube->mesh->first.cols * GeometryFactory::cubeWidthUnit / 2.0, 0.0f, cube->mesh->first.rows * GeometryFactory::cubeWidthUnit / 2.0f) *
-			rot_tr;
-	}
-
-	return
-		glm::translate<float>(cube->mesh->first.rows * GeometryFactory::cubeWidthUnit / 2.0, 0.0f, cube->mesh->first.cols * GeometryFactory::cubeWidthUnit / 2.0f) *
-		rot_tr;
-}
-
-void CMyApp::PutDownActiveCube()
-{
-	int cubeRowNum, cubeColNum;
-
-	// Determine row and column nums based on rotation of the active cube.
-	if (fmod(activeCube->rotation, 180.0f) == 0.0)
-	{
-		cubeRowNum = activeCube->mesh->first.rows; cubeColNum = activeCube->mesh->first.cols;
-	}
-	else
-	{
-		cubeRowNum = activeCube->mesh->first.cols; cubeColNum = activeCube->mesh->first.rows;
-	}
-
-	// Check whether the active cube is above the base panel.
-	if (!(activeCube->position.row + cubeRowNum <= halfFloorSize && activeCube->position.col + cubeColNum <= halfFloorSize))
-	{
-		return;
-	}
-
-	// Find maximal Z value in the puffer below the active cube.
-	int zPufferRowInd, zPufferColInd;
-	int maxHeight = cubeZPuffer[activeCube->position.row + halfFloorSize][activeCube->position.col + halfFloorSize];
-	
-	for (int r = activeCube->position.row; r < activeCube->position.row + cubeRowNum; ++r)
-	{
-		for (int c = activeCube->position.col; c < activeCube->position.col + cubeColNum; ++c)
-		{
-			zPufferRowInd = r + halfFloorSize; zPufferColInd = c + halfFloorSize;
-			int currentZ = cubeZPuffer[zPufferRowInd][zPufferColInd];
-			
-			if (currentZ >= activeCube->position.height || currentZ < 0) return;
-
-			if (currentZ > maxHeight) maxHeight = currentZ;
-		}
-	}
-
-	// There is only one driver allowed.
-	if (activeCube->mesh->first == driverSize && driverPlaced)
-	{
-		return;
-	}
-	else if (activeCube->mesh->first == driverSize)
-	{
-		driverPlaced = true;
-	}
-
-	// Update Z puffer with dimensions of the active cube.
-	// std::cout << "Putting down active cube to height " << maxHeight + 1 << std::endl;
-	int valueToAdd = (int)activeCube->mesh->first.height;
-
-	if (activeCube->mesh->first == wheelSize || activeCube->mesh->first == driverSize || activeCube->mesh->first == reflectorSize)
-	{
-		valueToAdd = -(maxHeight + 1);
-	}
-
-	UpdateCubeZPuffer(activeCube->position.row + halfFloorSize, activeCube->position.col + halfFloorSize, cubeRowNum, cubeColNum, valueToAdd);
-
-	// Store active cube and get a new one.
-	auto newActiveCube = std::make_shared<Cube>(defaultActiveCubePos, activeCube->color, 0.0f, activeCube->mesh);
-	activeCube->position.height = maxHeight + 1;
-	cubes.push_back(activeCube);
-	activeCube = newActiveCube;
-
-	// Print Z-puffer to console.
-	PrintCubeZPuffer();
-}
-
 void CMyApp::InitInitialiVehicleParts()
 {
 	chassisMesh = GeometryFactory::GetLegoCube(chassisSize.rows, chassisSize.cols, (CubeHeight)chassisSize.height);
@@ -568,78 +363,6 @@ void CMyApp::InitInitialiVehicleParts()
 
 	UpdateCubeZPuffer(halfFloorSize + chassisSize.rows / 2 - wheelSize.rows, halfFloorSize + chassisSize.cols / 2, wheelSize.rows, wheelSize.cols, -1);
 	UpdateCubeZPuffer(halfFloorSize + chassisSize.rows / 2 - wheelSize.rows, halfFloorSize - chassisSize.cols / 2 - 1, wheelSize.rows, wheelSize.cols, -1);
-}
-
-void CMyApp::DrawInitialVehicleParts()
-{
-	// Draw chassis.
-	m_program.On();
-
-	glm::mat4 matWorld = glm::scale<float>(0.1f, 0.1f, 0.1f);
-		
-	if ((currentScene == Scene::RACING || currentScene == Scene::FINISH) && track.IsInitialized())
-	{
-		matWorld *= glm::translate<float>(carPosition) *
-					glm::rotate<float>(driveDirection, 0, 1, 0);
-	}
-
-	matWorld *= glm::translate<float>(chassisSize.cols / 2.0f * -GeometryFactory::cubeWidthUnit, chassisHeight * GeometryFactory::thinCubeHeightUnit, chassisSize.rows / 2.0f * -GeometryFactory::cubeWidthUnit);
-
-	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
-	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
-
-	m_program.SetUniform("world", matWorld);
-	m_program.SetUniform("worldIT", matWorldIT);
-	m_program.SetUniform("MVP", mvp);
-	m_program.SetUniform("eye_pos", m_camera.GetEye());
-
-	m_program.SetTexture("texImage", 0, cubeColorTextures.find(CubeColor::BROWN)->second);
-
-	chassisMesh->draw();
-
-	// shader kikapcsolasa
-	m_program.Off();
-
-	// Draw four wheels.
-	std::vector<std::pair<float, glm::vec3>> rot_trans = 
-	{
-		std::pair<float, glm::vec3>(0.0f, glm::vec3(3.0f * GeometryFactory::cubeWidthUnit, GeometryFactory::thinCubeHeightUnit, -5.0f * GeometryFactory::cubeWidthUnit)),
-		std::pair<float, glm::vec3>(0.0f, glm::vec3(3.0f * GeometryFactory::cubeWidthUnit, GeometryFactory::thinCubeHeightUnit, 2.0f * GeometryFactory::cubeWidthUnit)),
-		std::pair<float, glm::vec3>(180.0f, glm::vec3(-3.0f * GeometryFactory::cubeWidthUnit, GeometryFactory::thinCubeHeightUnit, -2.0f * GeometryFactory::cubeWidthUnit)),
-		std::pair<float, glm::vec3>(180.0f, glm::vec3(-3.0f * GeometryFactory::cubeWidthUnit, GeometryFactory::thinCubeHeightUnit, 5.0f * GeometryFactory::cubeWidthUnit))
-	};
-
-	std::for_each(rot_trans.begin(), rot_trans.end(), [this](auto pair)
-	{
-		m_program.On();
-
-		glm::mat4 matWorld =
-			glm::scale<float>(0.1f, 0.1f, 0.1f);
-
-		if ((currentScene == Scene::RACING || currentScene == Scene::FINISH) && track.IsInitialized())
-		{
-			matWorld *= glm::translate<float>(carPosition) *
-						glm::rotate<float>(driveDirection, 0, 1, 0);
-		}
-
-		matWorld *= glm::translate<float>(pair.second) *
-					glm::rotate<float>(pair.first, 0, 1, 0);
-
-		glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
-		glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
-
-		m_program.SetUniform("world", matWorld);
-		m_program.SetUniform("worldIT", matWorldIT);
-		m_program.SetUniform("MVP", mvp);
-		m_program.SetUniform("eye_pos", m_camera.GetEye());
-
-		m_program.SetTexture("texImage", 0, cubeColorTextures.find(CubeColor::BLACK)->second);
-
-		wheelMesh->draw();
-
-		// shader kikapcsolasa
-		m_program.Off();
-	});
 }
 
 void CMyApp::AssembleTrack()
@@ -750,6 +473,322 @@ void CMyApp::AssembleTrack()
 	});
 }
 
+void CMyApp::DeleteTextures()
+{
+	std::for_each(cubeColorTextures.begin(), cubeColorTextures.end(), [](auto kvpair)
+	{
+		glDeleteTextures(1, &kvpair.second);
+	});
+}
+
+//////////////////////////
+// Z-PUFFER
+//////////////////////////
+
+void CMyApp::InitCubeZPuffer()
+{
+	for (int r = 0; r < floorSize; ++r)
+	{
+		for (int c = 0; c < floorSize; ++c)
+		{
+			cubeZPuffer[r][c] = 0;
+		}
+	}
+}
+
+void CMyApp::UpdateCubeZPuffer(int topLeftRow, int topLeftCol, int rowNum, int colNum, int valueToAdd)
+{
+	for (int r = topLeftRow; r < topLeftRow + rowNum; ++r)
+	{
+		for (int c = topLeftCol; c < topLeftCol + colNum; ++c)
+		{
+			cubeZPuffer[r][c] += valueToAdd;
+		}
+	}
+}
+
+void CMyApp::PrintCubeZPuffer()
+{
+	system("cls");
+
+	for (int r = 0; r < floorSize; ++r)
+	{
+		for (int c = 0; c < floorSize; ++c)
+		{
+			if (cubeZPuffer[r][c] >= 0) std::cout << " " << cubeZPuffer[r][c] << " ";
+			else std::cout << "-" << abs(cubeZPuffer[r][c]) << " ";
+		}
+		std::cout << std::endl;
+	}
+}
+
+void CMyApp::PutDownActiveCube()
+{
+	int cubeRowNum, cubeColNum;
+
+	// Determine row and column nums based on rotation of the active cube.
+	if (fmod(activeCube->rotation, 180.0f) == 0.0)
+	{
+		cubeRowNum = activeCube->mesh->first.rows; cubeColNum = activeCube->mesh->first.cols;
+	}
+	else
+	{
+		cubeRowNum = activeCube->mesh->first.cols; cubeColNum = activeCube->mesh->first.rows;
+	}
+
+	// Check whether the active cube is above the base panel.
+	if (!(activeCube->position.row + cubeRowNum <= halfFloorSize && activeCube->position.col + cubeColNum <= halfFloorSize))
+	{
+		return;
+	}
+
+	// Find maximal Z value in the puffer below the active cube.
+	int zPufferRowInd, zPufferColInd;
+	int maxHeight = cubeZPuffer[activeCube->position.row + halfFloorSize][activeCube->position.col + halfFloorSize];
+
+	for (int r = activeCube->position.row; r < activeCube->position.row + cubeRowNum; ++r)
+	{
+		for (int c = activeCube->position.col; c < activeCube->position.col + cubeColNum; ++c)
+		{
+			zPufferRowInd = r + halfFloorSize; zPufferColInd = c + halfFloorSize;
+			int currentZ = cubeZPuffer[zPufferRowInd][zPufferColInd];
+
+			if (currentZ >= activeCube->position.height || currentZ < 0) return;
+
+			if (currentZ > maxHeight) maxHeight = currentZ;
+		}
+	}
+
+	// There is only one driver allowed.
+	if (activeCube->mesh->first == driverSize && driverPlaced)
+	{
+		return;
+	}
+	else if (activeCube->mesh->first == driverSize)
+	{
+		driverPlaced = true;
+	}
+
+	// Update Z puffer with dimensions of the active cube.
+	// std::cout << "Putting down active cube to height " << maxHeight + 1 << std::endl;
+	int valueToAdd = (int)activeCube->mesh->first.height;
+
+	if (activeCube->mesh->first == wheelSize || activeCube->mesh->first == driverSize || activeCube->mesh->first == reflectorSize)
+	{
+		valueToAdd = -(maxHeight + 1);
+	}
+
+	UpdateCubeZPuffer(activeCube->position.row + halfFloorSize, activeCube->position.col + halfFloorSize, cubeRowNum, cubeColNum, valueToAdd);
+
+	// Store active cube and get a new one.
+	auto newActiveCube = std::make_shared<Cube>(defaultActiveCubePos, activeCube->color, 0.0f, activeCube->mesh);
+	activeCube->position.height = maxHeight + 1;
+	cubes.push_back(activeCube);
+	activeCube = newActiveCube;
+
+	// Print Z-puffer to console.
+	PrintCubeZPuffer();
+}
+
+//////////////////////////
+// DRAW FUNCTIONS
+//////////////////////////
+
+void CMyApp::DrawBasePlain()
+{
+	m_program.On();
+
+	glm::mat4 matWorld = glm::mat4(1.0f);
+	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
+	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
+
+	m_program.SetUniform("world", matWorld);
+	m_program.SetUniform("worldIT", matWorldIT);
+	m_program.SetUniform("MVP", mvp);
+	m_program.SetUniform("eye_pos", m_camera.GetEye());
+	m_program.SetUniform("light", (int)light);
+
+	m_program.SetTexture("texImage", 0, basePlainTextureID);
+
+	// kapcsoljuk be a VAO-t (a VBO jön vele együtt)
+	m_vb.On();
+
+	m_vb.DrawIndexed(GL_TRIANGLES, 0, 6, 0);
+
+	m_vb.Off();
+
+	// shader kikapcsolasa
+	m_program.Off();
+}
+
+void CMyApp::DrawFloor()
+{
+	m_program.On();
+
+	glm::mat4 matWorld =
+		glm::scale<float>(0.1f, 0.1f, 0.1f) *
+		glm::translate<float>(floorSize / 2 * -GeometryFactory::cubeWidthUnit, 0.0f, floorSize / 2 * -GeometryFactory::cubeWidthUnit);
+
+	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
+	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
+
+	m_program.SetUniform("world", matWorld);
+	m_program.SetUniform("worldIT", matWorldIT);
+	m_program.SetUniform("MVP", mvp);
+	m_program.SetUniform("eye_pos", m_camera.GetEye());
+	m_program.SetUniform("light", (int)light);
+
+	m_program.SetTexture("texImage", 0, floorTextureID);
+
+	floor->draw();
+
+	// shader kikapcsolasa
+	m_program.Off();
+}
+
+void CMyApp::DrawCube(std::shared_ptr<Cube> cube)
+{
+	m_program.On();
+
+	glm::mat4 matWorld = glm::scale<float>(0.1f, 0.1f, 0.1f);
+
+	if (currentScene == Scene::RACING)
+	{
+		matWorld *= glm::translate<float>(carPosition) * glm::rotate<float>(cubeDirection, 0, 1, 0);
+	}
+
+	matWorld *= glm::translate<float>(cube->position.col * GeometryFactory::cubeWidthUnit, cube->position.height * GeometryFactory::thinCubeHeightUnit, cube->position.row * GeometryFactory::cubeWidthUnit) *
+		GetCubeRotationMatrix(cube);
+
+	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
+	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
+
+	m_program.SetUniform("world", matWorld);
+	m_program.SetUniform("worldIT", matWorldIT);
+	m_program.SetUniform("MVP", mvp);
+	m_program.SetUniform("eye_pos", m_camera.GetEye());
+	m_program.SetUniform("light", (int)light);
+
+	m_program.SetTexture("texImage", 0, cube->color->second);
+
+	cubePrefabs[cube->mesh->first]->draw();
+
+	// shader kikapcsolasa
+	m_program.Off();
+}
+
+glm::mat4 CMyApp::GetCubeRotationMatrix(std::shared_ptr<Cube> cube)
+{
+	auto rot_tr =
+		glm::rotate<float>(cube->rotation, 0.0f, 1.0f, 0.0f) *
+		glm::translate<float>(cube->mesh->first.cols * -GeometryFactory::cubeWidthUnit / 2.0, 0.0f, cube->mesh->first.rows * -GeometryFactory::cubeWidthUnit / 2.0f);
+
+	if (fmod(cube->rotation, 180.f) == 0.0f)
+	{
+		return
+			glm::translate<float>(cube->mesh->first.cols * GeometryFactory::cubeWidthUnit / 2.0, 0.0f, cube->mesh->first.rows * GeometryFactory::cubeWidthUnit / 2.0f) *
+			rot_tr;
+	}
+
+	return
+		glm::translate<float>(cube->mesh->first.rows * GeometryFactory::cubeWidthUnit / 2.0, 0.0f, cube->mesh->first.cols * GeometryFactory::cubeWidthUnit / 2.0f) *
+		rot_tr;
+}
+
+void CMyApp::DrawAllCubes(bool filterOuterCubes)
+{
+	std::for_each(cubes.begin(), cubes.end(), [this, filterOuterCubes](auto cube)
+	{
+		if (filterOuterCubes)
+		{
+			if (
+				(cube->position.row >= -chassisSize.rows / 2 && cube->position.row < chassisSize.rows / 2) &&
+				(cube->position.col >= -chassisSize.cols / 2 && cube->position.col < chassisSize.cols / 2))
+			{
+				DrawCube(cube);
+			}
+		}
+		else
+		{
+			DrawCube(cube);
+		}
+	});
+}
+
+void CMyApp::DrawInitialVehicleParts()
+{
+	// Draw chassis.
+	m_program.On();
+
+	glm::mat4 matWorld = glm::scale<float>(0.1f, 0.1f, 0.1f);
+
+	if ((currentScene == Scene::RACING || currentScene == Scene::FINISH) && track.IsInitialized())
+	{
+		matWorld *= glm::translate<float>(carPosition) *
+			glm::rotate<float>(driveDirection, 0, 1, 0);
+	}
+
+	matWorld *= glm::translate<float>(chassisSize.cols / 2.0f * -GeometryFactory::cubeWidthUnit, chassisHeight * GeometryFactory::thinCubeHeightUnit, chassisSize.rows / 2.0f * -GeometryFactory::cubeWidthUnit);
+
+	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
+	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
+
+	m_program.SetUniform("world", matWorld);
+	m_program.SetUniform("worldIT", matWorldIT);
+	m_program.SetUniform("MVP", mvp);
+	m_program.SetUniform("eye_pos", m_camera.GetEye());
+	m_program.SetUniform("light", (int)light);
+
+	m_program.SetTexture("texImage", 0, cubeColorTextures.find(CubeColor::BROWN)->second);
+
+	chassisMesh->draw();
+
+	// shader kikapcsolasa
+	m_program.Off();
+
+	// Draw four wheels.
+	std::vector<std::pair<float, glm::vec3>> rot_trans =
+	{
+		std::pair<float, glm::vec3>(0.0f, glm::vec3(3.0f * GeometryFactory::cubeWidthUnit, GeometryFactory::thinCubeHeightUnit, -5.0f * GeometryFactory::cubeWidthUnit)),
+		std::pair<float, glm::vec3>(0.0f, glm::vec3(3.0f * GeometryFactory::cubeWidthUnit, GeometryFactory::thinCubeHeightUnit, 2.0f * GeometryFactory::cubeWidthUnit)),
+		std::pair<float, glm::vec3>(180.0f, glm::vec3(-3.0f * GeometryFactory::cubeWidthUnit, GeometryFactory::thinCubeHeightUnit, -2.0f * GeometryFactory::cubeWidthUnit)),
+		std::pair<float, glm::vec3>(180.0f, glm::vec3(-3.0f * GeometryFactory::cubeWidthUnit, GeometryFactory::thinCubeHeightUnit, 5.0f * GeometryFactory::cubeWidthUnit))
+	};
+
+	std::for_each(rot_trans.begin(), rot_trans.end(), [this](auto pair)
+	{
+		m_program.On();
+
+		glm::mat4 matWorld =
+			glm::scale<float>(0.1f, 0.1f, 0.1f);
+
+		if ((currentScene == Scene::RACING || currentScene == Scene::FINISH) && track.IsInitialized())
+		{
+			matWorld *= glm::translate<float>(carPosition) *
+				glm::rotate<float>(driveDirection, 0, 1, 0);
+		}
+
+		matWorld *= glm::translate<float>(pair.second) *
+			glm::rotate<float>(pair.first, 0, 1, 0);
+
+		glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
+		glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
+
+		m_program.SetUniform("world", matWorld);
+		m_program.SetUniform("worldIT", matWorldIT);
+		m_program.SetUniform("MVP", mvp);
+		m_program.SetUniform("eye_pos", m_camera.GetEye());
+		m_program.SetUniform("light", (int)light);
+
+		m_program.SetTexture("texImage", 0, cubeColorTextures.find(CubeColor::BLACK)->second);
+
+		wheelMesh->draw();
+
+		// shader kikapcsolasa
+		m_program.Off();
+	});
+}
+
 void CMyApp::DrawTrack()
 {
 	for (int i = 0; i < track.sections.size(); ++i)
@@ -768,6 +807,7 @@ void CMyApp::DrawTrack()
 		m_program.SetUniform("worldIT", matWorldIT);
 		m_program.SetUniform("MVP", mvp);
 		m_program.SetUniform("eye_pos", m_camera.GetEye());
+		m_program.SetUniform("light", (int)light);
 
 		m_program.SetTexture("texImage", 0, asphaltTextureID);
 

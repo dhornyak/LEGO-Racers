@@ -107,5 +107,9 @@ protected:
 	bool raceStarted;
 	glm::vec3 carPosition;
 	float driveDirection, cubeDirection;
+
+	// Lights.
+	LightOptions light;
+	bool racingInDayLight;
 };
 
