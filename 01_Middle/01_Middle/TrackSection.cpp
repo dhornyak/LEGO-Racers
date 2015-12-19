@@ -96,6 +96,23 @@ float Line::GetRotationAroundY() const
 	return 0.0f;
 }
 
+float Line::GetDriveDirection() const
+{
+	float angle = 0.0f;
+
+	switch (orientation)
+	{
+	case Orientation::HORIZONTAL: angle = -90.0f;
+		break;
+	case Orientation::VERTICAL: angle = 0.0f;
+		break;
+	default:
+		break;
+	}
+
+	return angle;
+}
+
 //////////////////////////
 // CORNER
 //////////////////////////
@@ -167,7 +184,26 @@ glm::vec3 Corner::TranslateMeshTo() const
 
 float Corner::GetRotationAroundY() const
 {
-	return quadrant * 90.0f;
+	return (quadrant - 1) * 90.0f;
+}
+
+float Corner::GetDriveDirection() const
+{
+	float angleInQuadrant;
+
+	switch (direction)
+	{
+	case Direction::MINUS:
+		angleInQuadrant = quadrant * M_PI / 2.0f - currentAngle;
+		break;
+	case Direction::PLUS:
+		angleInQuadrant = (quadrant - 1) * M_PI / 2.0f + currentAngle;
+		break;
+	default:
+		break;
+	}
+
+	return angleInQuadrant * 180.0f / M_PI;
 }
 
 //////////////////////////
@@ -177,7 +213,6 @@ float Corner::GetRotationAroundY() const
 void Track::InitTrack()
 {
 	previousCalculation = SDL_GetTicks() / 1000.0f;
-	currentSection = 0;
 	isInitialized = true;
 }
 
@@ -207,4 +242,10 @@ glm::vec3 Track::GetPosition(float speed)
 
 	previousCalculation = currentTick;
 	return sections[currentSection - 1]->GetEndPosition();
+}
+
+float Track::GetDriveDirection()
+{
+	int sectionToQuery = (currentSection < sections.size()) ? currentSection : currentSection - 1;
+	return sections[sectionToQuery]->GetDriveDirection();
 }

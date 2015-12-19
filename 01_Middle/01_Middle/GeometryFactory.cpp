@@ -415,19 +415,29 @@ std::shared_ptr<Mesh> GeometryFactory::GetCornerTrackMesh(std::shared_ptr<const 
 	auto cornerMesh = std::make_shared<Mesh>();
 	float Y = corner->center.y;
 
-	glm::vec3 a(0.0f, Y, -3.0f / 4.0f * corner->radius);
-	glm::vec3 b(0.0f, Y, -1.0f / 4.0f * corner->radius);
-	glm::vec3 c(1.0f / 4.0f * corner->radius, Y, 0.0f);
-	glm::vec3 d(3.0f / 4.0f * corner->radius, Y, 0.0f);
-	glm::vec3 e(3.0f / 4.0f * corner->radius, Y, -1.0f / 2.0f * corner->radius);
-	glm::vec3 f(1.0f / 2.0f * corner->radius, Y, -3.0f / 4.0f * corner->radius);
+	/*glm::vec3 a(0.0f, Y, -2.0 * corner->radius);
+	glm::vec3 b(0.0f, Y, -0.5f * corner->radius);
+	glm::vec3 c(0.5f * corner->radius, Y, 0.0f);
+	glm::vec3 d(2.0f * corner->radius, Y, 0.0f);
+	glm::vec3 e(2.0f * corner->radius, Y, -1.5f * corner->radius);
+	glm::vec3 f(1.5f * corner->radius, Y, -2.0f * corner->radius);*/
+
+	glm::vec3 a(0.0f, Y, -2.0 * corner->radius);
+	glm::vec3 b(0.0f, Y, 0.0f);
+	glm::vec3 c(2.0f * corner->radius, Y, 0.0f);
+	glm::vec3 d(2.0f * corner->radius, Y, -1.5f * corner->radius);
+	glm::vec3 e(1.5f * corner->radius, Y, -2.0f * corner->radius);
 
 	glm::vec3 normal(0.0f, 1.0f, 0.0f);
 
-	cornerMesh->addTriangleTex(a, b, f, normal);
+	/*cornerMesh->addTriangleTex(a, b, f, normal);
 	cornerMesh->addTriangleTex(f, b, c, normal);
 	cornerMesh->addTriangleTex(f, c, e, normal);
-	cornerMesh->addTriangleTex(e, c, d, normal);
+	cornerMesh->addTriangleTex(e, c, d, normal);*/
+
+	cornerMesh->addTriangleTex(a, b, e, normal);
+	cornerMesh->addTriangleTex(e, b, d, normal);
+	cornerMesh->addTriangleTex(d, b, c, normal);
 
 	return cornerMesh;
 }

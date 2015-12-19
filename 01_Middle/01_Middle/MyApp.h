@@ -95,10 +95,16 @@ protected:
 	// Track components.
 	Track track;
 	std::vector<std::shared_ptr<Mesh>> trackSectionMeshes;
-	float speed;
+	
 	GLuint asphaltTextureID;
 
 	void AssembleTrack();
 	void DrawTrack();
+
+	// Racing components.
+	float speed;
+	bool raceStarted;
+	glm::vec3 carPosition;
+	float driveDirection;
 };
 

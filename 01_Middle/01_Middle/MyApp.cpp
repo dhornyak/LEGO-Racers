@@ -14,7 +14,7 @@
 #include <stdlib.h>
 
 CMyApp::CMyApp(void) :
-	defaultActiveCubePos(Position(0, 0, 10)), reflectorSize(CubeSize(1, 1, 6)), driverSize(CubeSize(3, 2, 10)), wheelSize(CubeSize(3, 1, 8)), chassisSize(CubeSize(10, 6, (int)CubeHeight::THIN)), speed(3.0f)
+	defaultActiveCubePos(Position(0, 0, 10)), reflectorSize(CubeSize(1, 1, 6)), driverSize(CubeSize(3, 2, 10)), wheelSize(CubeSize(3, 1, 8)), chassisSize(CubeSize(10, 6, (int)CubeHeight::THIN)), speed(10.0f)
 {
 	basePlainTextureID = TextureFromFile("LEGO_logo.jpg");
 	asphaltTextureID = TextureFromFile("asphalt.jpg");
@@ -37,7 +37,7 @@ bool CMyApp::Init()
 
 	// Create track.
 	AssembleTrack();
-	// track.InitTrack();
+	raceStarted = false;
 
 	floor = GeometryFactory::GetLegoCube(floorSize, floorSize, CubeHeight::THIN);
 	floor->initBuffers();
@@ -114,10 +114,11 @@ void CMyApp::Update()
 
 	last_time = SDL_GetTicks();
 
-	if (track.IsInitialized())
+	if (currentScene == Scene::RACING && raceStarted)
 	{
-		glm::vec3 currentPos = track.GetPosition(speed);
-		std::cout << currentPos.x << " " << currentPos.y << " " << currentPos.z << std::endl;
+		// Update camera and car position/direction.
+		carPosition = track.GetPosition(speed);
+		driveDirection = track.GetDriveDirection();
 	}
 }
 
@@ -136,7 +137,7 @@ void CMyApp::Render()
 		DrawCube(activeCube);
 		break;
 	case Scene::RACING:
-		// DrawInitialVehicleParts();
+		DrawInitialVehicleParts();
 		// DrawAllCubes();
 		DrawTrack();
 		break;
@@ -219,8 +220,29 @@ void CMyApp::KeyboardDown(SDL_KeyboardEvent &key)
 		{
 			cubes.pop_back();
 		}
-	case SDLK_SPACE:
-		track.InitTrack();
+	case SDLK_UP:
+		if (currentScene == Scene::RACING)
+		{
+			if (!raceStarted)
+			{
+				raceStarted = true;
+				track.InitTrack();
+			}
+			else
+			{
+				speed += 2.0f;
+				std::cout << "speed: " << speed << std::endl;
+			}
+		}
+		break;
+	case SDLK_DOWN:
+		if (currentScene == Scene::RACING && raceStarted)
+		{
+			speed -= 2.0f;
+			if (speed < 0.0f) speed = 0.0f;
+			std::cout << "speed: " << speed << std::endl;
+		}
+		break;
 	default:
 		break;
 	}
@@ -519,9 +541,15 @@ void CMyApp::DrawInitialVehicleParts()
 	// Draw chassis.
 	m_program.On();
 
-	glm::mat4 matWorld =
-		glm::scale<float>(0.1f, 0.1f, 0.1f) *
-		glm::translate<float>(3.0f * -GeometryFactory::cubeWidthUnit, 5.0f * GeometryFactory::thinCubeHeightUnit, 5.0f * -GeometryFactory::cubeWidthUnit);
+	glm::mat4 matWorld = glm::scale<float>(0.1f, 0.1f, 0.1f);
+		
+	if ((currentScene == Scene::RACING || currentScene == Scene::FINISH) && track.IsInitialized())
+	{
+		matWorld *= glm::translate<float>(carPosition) *
+					glm::rotate<float>(driveDirection, 0, 1, 0);
+	}
+
+	matWorld *= glm::translate<float>(chassisSize.cols / 2.0f * -GeometryFactory::cubeWidthUnit, chassisHeight * GeometryFactory::thinCubeHeightUnit, chassisSize.rows / 2.0f * -GeometryFactory::cubeWidthUnit);
 
 	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
 	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
@@ -552,9 +580,16 @@ void CMyApp::DrawInitialVehicleParts()
 		m_program.On();
 
 		glm::mat4 matWorld =
-			glm::scale<float>(0.1f, 0.1f, 0.1f) *
-			glm::translate<float>(pair.second) *
-			glm::rotate<float>(pair.first, 0, 1, 0);
+			glm::scale<float>(0.1f, 0.1f, 0.1f);
+
+		if ((currentScene == Scene::RACING || currentScene == Scene::FINISH) && track.IsInitialized())
+		{
+			matWorld *= glm::translate<float>(carPosition) *
+						glm::rotate<float>(driveDirection, 0, 1, 0);
+		}
+
+		matWorld *= glm::translate<float>(pair.second) *
+					glm::rotate<float>(pair.first, 0, 1, 0);
 
 		glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
 		glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
@@ -580,16 +615,16 @@ void CMyApp::AssembleTrack()
 		glm::vec3(2.0f * 5.0f * TrackSection::trackHalfWidth, 0.0f, 0.0f),
 		Line::Orientation::HORIZONTAL, TrackSection::Direction::PLUS);
 	track.sections.push_back(line1);
-	trackSectionMeshes.push_back(line1->GetMesh());
+	trackSectionMeshes.push_back(line1->GetMesh());*/
 
 	auto line2 = std::make_shared<Line>(
-		glm::vec3(2.0f * 5.0f * TrackSection::trackHalfWidth, 0.0f, 0.0f),
-		glm::vec3(2.0f * 5.0f * TrackSection::trackHalfWidth, 0.0f, -2.0f * 4.0f * TrackSection::trackHalfWidth),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, -2.0f * 1.0f * TrackSection::trackHalfWidth),
 		Line::Orientation::VERTICAL, TrackSection::Direction::MINUS);
 	track.sections.push_back(line2);
 	trackSectionMeshes.push_back(line2->GetMesh());
 
-	auto line3 = std::make_shared<Line>(
+	/*auto line3 = std::make_shared<Line>(
 		glm::vec3(2.0f * 5.0f * TrackSection::trackHalfWidth, 0.0f, -2.0f * 4.0f * TrackSection::trackHalfWidth),
 		glm::vec3(2.0f * 1.0f * TrackSection::trackHalfWidth, 0.0f, -2.0f * 4.0f * TrackSection::trackHalfWidth),
 		Line::Orientation::HORIZONTAL, TrackSection::Direction::MINUS);
@@ -604,12 +639,12 @@ void CMyApp::AssembleTrack()
 	trackSectionMeshes.push_back(line4->GetMesh());*/
 
 	auto corner1 = std::make_shared<Corner>(
-		glm::vec3(0.0f, 0.0f, 0.0f),
-		1.5f * TrackSection::trackHalfWidth, 1, TrackSection::Direction::PLUS);
+		glm::vec3(-TrackSection::trackHalfWidth, 0.0f, -2.0f * 1.0f * TrackSection::trackHalfWidth),
+		TrackSection::trackHalfWidth, 1, TrackSection::Direction::PLUS);
 	track.sections.push_back(corner1);
 	trackSectionMeshes.push_back(corner1->GetMesh());
 
-	auto corner2 = std::make_shared<Corner>(
+	/*auto corner2 = std::make_shared<Corner>(
 		glm::vec3(0.0f, 0.0f, 0.0f),
 		1.5f * TrackSection::trackHalfWidth, 2, TrackSection::Direction::PLUS);
 	track.sections.push_back(corner2);
@@ -625,7 +660,33 @@ void CMyApp::AssembleTrack()
 		glm::vec3(0.0f, 0.0f, 0.0f),
 		1.5f * TrackSection::trackHalfWidth, 4, TrackSection::Direction::PLUS);
 	track.sections.push_back(corner4);
-	trackSectionMeshes.push_back(corner4->GetMesh());
+	trackSectionMeshes.push_back(corner4->GetMesh());*/
+
+	auto corner5 = std::make_shared<Corner>(
+		glm::vec3(-TrackSection::trackHalfWidth, 0.0f, -4.0f * TrackSection::trackHalfWidth),
+		TrackSection::trackHalfWidth, 3, TrackSection::Direction::MINUS);
+	track.sections.push_back(corner5);
+	trackSectionMeshes.push_back(corner5->GetMesh());
+
+	auto line5 = std::make_shared<Line>(
+		glm::vec3(-2.0f * TrackSection::trackHalfWidth, 0.0f, -4.0f * TrackSection::trackHalfWidth),
+		glm::vec3(-2.0f * TrackSection::trackHalfWidth, 0.0f, -8.0f * TrackSection::trackHalfWidth),
+		Line::Orientation::VERTICAL, TrackSection::Direction::MINUS);
+	track.sections.push_back(line5);
+	trackSectionMeshes.push_back(line5->GetMesh());
+
+	auto corner6 = std::make_shared<Corner>(
+		glm::vec3(-TrackSection::trackHalfWidth, 0.0f, -8.0f * TrackSection::trackHalfWidth),
+		TrackSection::trackHalfWidth, 2, TrackSection::Direction::MINUS);
+	track.sections.push_back(corner6);
+	trackSectionMeshes.push_back(corner6->GetMesh());
+
+	auto line6 = std::make_shared<Line>(
+		glm::vec3(-TrackSection::trackHalfWidth, 0.0f, -9.0f * TrackSection::trackHalfWidth),
+		glm::vec3(7.0f * TrackSection::trackHalfWidth, 0.0f, -9.0f * TrackSection::trackHalfWidth),
+		Line::Orientation::HORIZONTAL, TrackSection::Direction::PLUS);
+	track.sections.push_back(line6);
+	trackSectionMeshes.push_back(line6->GetMesh());
 
 	// track.sections.push_back(std::make_shared<Line>(glm::vec3(6.0f, 0.0f, 0.0f), glm::vec3(12.0f, 0.0f, 0.0f), Line::Orientation::HORIZONTAL, TrackSection::Direction::PLUS));
 
