@@ -96,17 +96,21 @@ protected:
 	// Track components.
 	Track track;
 	std::vector<std::shared_ptr<Mesh>> trackSectionMeshes;
-	
+	std::shared_ptr<Mesh> startLineMesh, finishLineMesh;
+	void DrawStartAndFinishLine();
+
 	GLuint asphaltTextureID;
+	GLuint finishLineTextureID;
 
 	void AssembleTrack();
 	void DrawTrack();
 
 	// Racing components.
-	float speed;
+	float initialSpeed, speed;
 	bool raceStarted;
 	glm::vec3 carPosition;
 	float driveDirection, cubeDirection;
+	void ResetRace();
 
 	// Lights.
 	LightOptions light;

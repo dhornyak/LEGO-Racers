@@ -226,6 +226,18 @@ void Track::InitTrack()
 	isInitialized = true;
 }
 
+void Track::Reset()
+{
+	std::for_each(sections.begin(), sections.end(), [](auto section)
+	{
+		section->Reset();
+	});
+
+	isInitialized = false;
+	isFinished = false;
+	currentSection = 0;
+}
+
 glm::vec3 Track::GetPosition(float speed)
 {
 	float currentTick = SDL_GetTicks() / 1000.0f;

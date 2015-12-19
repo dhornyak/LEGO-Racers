@@ -30,6 +30,7 @@ public:
 
 	static std::shared_ptr<Mesh> GetLineTrackMesh(std::shared_ptr<const Line> line, float halfWidth);
 	static std::shared_ptr<Mesh> GetCornerTrackMesh(std::shared_ptr<const Corner> corner, float halfWidth);
+	static std::shared_ptr<Mesh> GetFinishLine(glm::vec3 center, float size);
 protected:
 	static const int N;
 

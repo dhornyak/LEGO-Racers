@@ -103,6 +103,7 @@ public:
 	{ }
 
 	void InitTrack();
+	void Reset();
 	glm::vec3 GetPosition(float speed);
 	float GetDriveDirection() const;
 	float GetCubeDirection() const;

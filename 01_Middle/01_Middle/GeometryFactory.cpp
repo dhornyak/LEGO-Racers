@@ -441,3 +441,17 @@ std::shared_ptr<Mesh> GeometryFactory::GetCornerTrackMesh(std::shared_ptr<const 
 
 	return cornerMesh;
 }
+
+std::shared_ptr<Mesh> GeometryFactory::GetFinishLine(glm::vec3 center, float size)
+{
+	auto finishLine = std::make_shared<Mesh>();
+
+	glm::vec3 a(center.x - size / 2.0f, center.y, center.z - size / 2.0f);
+	glm::vec3 b(center.x - size / 2.0f, center.y, center.z + size / 2.0f);
+	glm::vec3 c(center.x + size / 2.0f, center.y, center.z + size / 2.0f);
+	glm::vec3 d(center.x + size / 2.0f, center.y, center.z - size / 2.0f);
+
+	finishLine->addQuadTex(a, b, c, d, glm::vec3(0.0f, 1.0f, 0.0f));
+
+	return finishLine;
+}
