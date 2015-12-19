@@ -62,7 +62,7 @@ protected:
 
 	std::vector<std::shared_ptr<Cube>> cubes;
 	void DrawCube(std::shared_ptr<Cube> cube);
-	void DrawAllCubes();
+	void DrawAllCubes(bool filterOuterCubes = false);
 
 	std::map<CubeSize, std::shared_ptr<Mesh>> cubePrefabs;
 	void InitCubePrefabs();
@@ -82,6 +82,7 @@ protected:
 	// Special cube identifiers.
 	CubeSize reflectorSize, driverSize, wheelSize, chassisSize;
 	const int chassisHeight = 5;
+	bool driverPlaced;
 
 	// Initial vehicle parts.
 	std::shared_ptr<Mesh> wheelMesh = nullptr;
@@ -105,6 +106,6 @@ protected:
 	float speed;
 	bool raceStarted;
 	glm::vec3 carPosition;
-	float driveDirection;
+	float driveDirection, cubeDirection;
 };
 

@@ -48,6 +48,16 @@ public:
 		return m_matViewProj;
 	}
 
+	void SetEye(glm::vec3 eye)
+	{
+		m_eye = eye;
+	}
+
+	void SetAt(glm::vec3 at)
+	{
+		m_at = at;
+	}
+
 	void Resize(int _w, int _h);
 
 	void KeyboardDown(SDL_KeyboardEvent& key);

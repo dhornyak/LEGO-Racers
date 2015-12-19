@@ -33,6 +33,7 @@ public:
 	virtual glm::vec3 TranslateMeshTo() const = 0;
 	virtual float GetRotationAroundY() const = 0;
 	virtual float GetDriveDirection() const = 0;
+	virtual float GetCubeDirection() const = 0;
 
 	static const float trackHalfWidth;
 };
@@ -60,6 +61,7 @@ public:
 	virtual glm::vec3 TranslateMeshTo() const override;
 	virtual float GetRotationAroundY() const override;
 	virtual float GetDriveDirection() const override;
+	virtual float GetCubeDirection() const override;
 protected:
 	Direction direction;
 	glm::vec3 currentPosition;
@@ -84,6 +86,7 @@ public:
 	virtual glm::vec3 TranslateMeshTo() const override;
 	virtual float GetRotationAroundY() const override;
 	virtual float GetDriveDirection() const override;
+	virtual float GetCubeDirection() const override;
 protected:
 	Direction direction;
 	float startAngle;
@@ -101,7 +104,8 @@ public:
 
 	void InitTrack();
 	glm::vec3 GetPosition(float speed);
-	float GetDriveDirection();
+	float GetDriveDirection() const;
+	float GetCubeDirection() const;
 	bool IsInitialized() const { return isInitialized; }
 private:
 	int currentSection;

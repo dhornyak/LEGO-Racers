@@ -113,6 +113,11 @@ float Line::GetDriveDirection() const
 	return angle;
 }
 
+float Line::GetCubeDirection() const
+{
+	return GetDriveDirection();
+}
+
 //////////////////////////
 // CORNER
 //////////////////////////
@@ -206,6 +211,11 @@ float Corner::GetDriveDirection() const
 	return angleInQuadrant * 180.0f / M_PI;
 }
 
+float Corner::GetCubeDirection() const
+{
+	return (direction == Direction::MINUS) ? GetDriveDirection() + 180.0f : GetDriveDirection();
+}
+
 //////////////////////////
 // TRACK
 //////////////////////////
@@ -244,7 +254,13 @@ glm::vec3 Track::GetPosition(float speed)
 	return sections[currentSection - 1]->GetEndPosition();
 }
 
-float Track::GetDriveDirection()
+float Track::GetCubeDirection() const
+{
+	int sectionToQuery = (currentSection < sections.size()) ? currentSection : currentSection - 1;
+	return sections[sectionToQuery]->GetCubeDirection();
+}
+
+float Track::GetDriveDirection() const
 {
 	int sectionToQuery = (currentSection < sections.size()) ? currentSection : currentSection - 1;
 	return sections[sectionToQuery]->GetDriveDirection();

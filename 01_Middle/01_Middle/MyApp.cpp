@@ -14,7 +14,13 @@
 #include <stdlib.h>
 
 CMyApp::CMyApp(void) :
-	defaultActiveCubePos(Position(0, 0, 10)), reflectorSize(CubeSize(1, 1, 6)), driverSize(CubeSize(3, 2, 10)), wheelSize(CubeSize(3, 1, 8)), chassisSize(CubeSize(10, 6, (int)CubeHeight::THIN)), speed(10.0f)
+	defaultActiveCubePos(Position(0, 0, 10)), 
+	reflectorSize(CubeSize(1, 1, 6)), 
+	driverSize(CubeSize(3, 2, 10)), 
+	wheelSize(CubeSize(3, 1, 8)), 
+	chassisSize(CubeSize(10, 6, (int)CubeHeight::THIN)), 
+	speed(10.0f),
+	driverPlaced(false)
 {
 	basePlainTextureID = TextureFromFile("LEGO_logo.jpg");
 	asphaltTextureID = TextureFromFile("asphalt.jpg");
@@ -42,6 +48,8 @@ bool CMyApp::Init()
 	floor = GeometryFactory::GetLegoCube(floorSize, floorSize, CubeHeight::THIN);
 	floor->initBuffers();
 	floorTextureID = cubeColorTextures[CubeColor::GRAY];
+
+	m_camera.SetEye(glm::vec3(0.0f, 25.0f, 25.0f));
 
 	// törlési szín legyen kékes
 	glClearColor(0.125f, 0.25f, 0.5f, 1.0f);
@@ -103,6 +111,8 @@ bool CMyApp::Init()
 void CMyApp::Clean()
 {
 	glDeleteTextures(1, &basePlainTextureID);
+	glDeleteTextures(1, &asphaltTextureID);
+	DeleteTextures();
 }
 
 void CMyApp::Update()
@@ -119,6 +129,7 @@ void CMyApp::Update()
 		// Update camera and car position/direction.
 		carPosition = track.GetPosition(speed);
 		driveDirection = track.GetDriveDirection();
+		cubeDirection = track.GetCubeDirection();
 	}
 }
 
@@ -138,7 +149,7 @@ void CMyApp::Render()
 		break;
 	case Scene::RACING:
 		DrawInitialVehicleParts();
-		// DrawAllCubes();
+		DrawAllCubes(true);
 		DrawTrack();
 		break;
 	case Scene::FINISH:
@@ -205,7 +216,8 @@ void CMyApp::KeyboardDown(SDL_KeyboardEvent &key)
 	case SDLK_KP_ENTER:
 		switch (currentScene)
 		{
-		case Scene::EDITING: currentScene = Scene::RACING;
+		case Scene::EDITING: 
+			if (driverPlaced) currentScene = Scene::RACING;
 			break;
 		case Scene::RACING: currentScene = Scene::EDITING;
 			break;
@@ -215,11 +227,6 @@ void CMyApp::KeyboardDown(SDL_KeyboardEvent &key)
 			break;
 		}
 		break;
-	case SDLK_BACKSPACE:
-		if (cubes.size() > 0)
-		{
-			cubes.pop_back();
-		}
 	case SDLK_UP:
 		if (currentScene == Scene::RACING)
 		{
@@ -319,10 +326,15 @@ void CMyApp::DrawCube(std::shared_ptr<Cube> cube)
 {
 	m_program.On();
 
-	glm::mat4 matWorld =
-		glm::scale<float>(0.1f, 0.1f, 0.1f) *
-		glm::translate<float>(cube->position.col * GeometryFactory::cubeWidthUnit, cube->position.height * GeometryFactory::thinCubeHeightUnit, cube->position.row * GeometryFactory::cubeWidthUnit) *
-		GetCubeRotationMatrix(cube);
+	glm::mat4 matWorld = glm::scale<float>(0.1f, 0.1f, 0.1f);
+		
+	if (currentScene == Scene::RACING)
+	{
+		matWorld *= glm::translate<float>(carPosition) * glm::rotate<float>(cubeDirection, 0, 1, 0);
+	}
+
+	matWorld *= glm::translate<float>(cube->position.col * GeometryFactory::cubeWidthUnit, cube->position.height * GeometryFactory::thinCubeHeightUnit, cube->position.row * GeometryFactory::cubeWidthUnit) *
+				GetCubeRotationMatrix(cube);
 
 	glm::mat4 matWorldIT = glm::transpose(glm::inverse(matWorld));
 	glm::mat4 mvp = m_camera.GetViewProj() *matWorld;
@@ -340,11 +352,23 @@ void CMyApp::DrawCube(std::shared_ptr<Cube> cube)
 	m_program.Off();
 }
 
-void CMyApp::DrawAllCubes()
+void CMyApp::DrawAllCubes(bool filterOuterCubes)
 {
-	std::for_each(cubes.begin(), cubes.end(), [this](auto cube)
+	std::for_each(cubes.begin(), cubes.end(), [this, filterOuterCubes](auto cube)
 	{
-		DrawCube(cube);
+		if (filterOuterCubes)
+		{
+			if (
+				(cube->position.row >= -chassisSize.rows / 2 && cube->position.row < chassisSize.rows / 2) &&
+				(cube->position.col >= -chassisSize.cols / 2 && cube->position.col < chassisSize.cols / 2))
+			{
+				DrawCube(cube);
+			}
+		}
+		else
+		{
+			DrawCube(cube);
+		}
 	});
 }
 
@@ -493,6 +517,16 @@ void CMyApp::PutDownActiveCube()
 
 			if (currentZ > maxHeight) maxHeight = currentZ;
 		}
+	}
+
+	// There is only one driver allowed.
+	if (activeCube->mesh->first == driverSize && driverPlaced)
+	{
+		return;
+	}
+	else if (activeCube->mesh->first == driverSize)
+	{
+		driverPlaced = true;
 	}
 
 	// Update Z puffer with dimensions of the active cube.
