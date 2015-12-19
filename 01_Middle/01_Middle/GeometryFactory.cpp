@@ -1,5 +1,7 @@
 #include "GeometryFactory.h"
 
+#include "TrackSection.h"
+
 #include <vector>
 
 // Static cube parameters.
@@ -50,7 +52,7 @@ std::shared_ptr<Mesh> GeometryFactory::GetCircle(glm::vec3 center, glm::vec3 nor
 	{
 		float angle = (2 * M_PI / N) * i;
 		glm::vec2 tex(0.25f * cos(angle + M_PI / 2.0f) + 0.5f, 0.25f * sin(angle + M_PI / 2.0f) + 0.5f);
-		
+
 		if (normal.x == 1.0f)
 		{
 			circle->addVertex({ glm::vec3(0.0f, radius * sin(angle), radius * cos(angle)) + center, normal, tex });
@@ -136,7 +138,7 @@ glm::vec3 GeometryFactory::CalculateSphereCoordinate(float x, float y, float rad
 {
 	float u = 2 * M_PI * x;
 	float v = M_PI * y;
-	
+
 	glm::vec3 vertex(radius * cos(u)*sin(v), radius * cos(v), radius * sin(u)*sin(v));
 	return vertex;
 }
@@ -148,9 +150,9 @@ std::shared_ptr<Mesh> GeometryFactory::GetSphere(glm::vec3 center, float radius)
 	float delta = 1.0 / N;
 	glm::vec2 tex(0.0f, 0.0f);
 
-	for (int i = 0; i < N; ++i) 
+	for (int i = 0; i < N; ++i)
 	{
-		for (int j = 0; j < N; ++j) 
+		for (int j = 0; j < N; ++j)
 		{
 			float x = i * delta;
 			float y = j * delta;
@@ -159,7 +161,7 @@ std::shared_ptr<Mesh> GeometryFactory::GetSphere(glm::vec3 center, float radius)
 			auto a = CalculateSphereCoordinate(x, y, radius) + center;
 			auto b = CalculateSphereCoordinate(x + delta, y, radius) + center;
 			auto c = CalculateSphereCoordinate(x, y + delta, radius) + center;
-			
+
 			auto dir = glm::cross((b - a), (c - a)); // cross product
 			sphere->addTriangle(a, b, c, dir / (float)dir.length(), tex);
 
@@ -218,7 +220,7 @@ std::shared_ptr<Mesh> GeometryFactory::GetDriverTorso(glm::vec3 bottomCenterPosi
 	auto torso = std::make_shared<Mesh>();
 
 	float height = 5.0f * thinCubeHeightUnit;
-	
+
 	float bottomXWidthHalf = 1.0f * cubeWidthUnit - cubeWidthOffset;
 	float bottomZWidthHalf = 0.5f * cubeWidthUnit - cubeWidthOffset;
 
@@ -260,11 +262,11 @@ std::shared_ptr<Mesh> GeometryFactory::GetDriver()
 
 	// left leg
 	driver = GetCuboid(
-		glm::vec3(cubeWidthOffset, 2.0 * thinCubeHeightUnit, cubeWidthOffset), 
+		glm::vec3(cubeWidthOffset, 2.0 * thinCubeHeightUnit, cubeWidthOffset),
 		glm::vec3(cubeWidthOffset + xWidth, 0.0f, cubeWidthOffset + zWidth));
-	
+
 	driver->merge(GetCuboid(
-		glm::vec3(cubeWidthOffset, 3.0 * thinCubeHeightUnit, cubeWidthOffset + zWidth - thinCubeHeightUnit), 
+		glm::vec3(cubeWidthOffset, 3.0 * thinCubeHeightUnit, cubeWidthOffset + zWidth - thinCubeHeightUnit),
 		glm::vec3(cubeWidthOffset + xWidth, 0.0f, cubeWidthOffset + zWidth)).get());
 
 	// right leg
@@ -349,6 +351,83 @@ std::shared_ptr<Mesh> GeometryFactory::GetWheel()
 		glm::vec3(1.2f * cubeWidthUnit, 1.5f * cubeWidthUnit, 1.5f * cubeWidthUnit),
 		glm::vec3(1.0f, 0.0f, 0.0f),
 		1.0f * cubeWidthUnit).get());
-	
+
 	return wheel;
+}
+
+std::shared_ptr<Mesh> GeometryFactory::GetLineTrackMesh(std::shared_ptr<const Line> line, float halfWidth)
+{
+	auto lineMesh = std::make_shared<Mesh>();
+	int quadNum = 16;
+
+	for (int i = 0; i < 16; ++i)
+	{
+		switch (line->orientation)
+		{
+		case Line::Orientation::HORIZONTAL:
+		{
+			float width = abs(line->start.x - line->end.x);
+			float startX = (line->start.x < line->end.x) ? 0.0f : -width;
+
+			float currentX = (width / quadNum) * i + startX;
+			float nextX = (width / quadNum) * (i + 1) + startX;
+			float Y = line->start.y;
+			// float zTop = line->start.z - halfWidth, zBottom = line->start.z + halfWidth;
+			float zTop = 0.0f - halfWidth, zBottom = 0.0f + halfWidth;
+
+			glm::vec3 a(currentX, Y, zTop);
+			glm::vec3 b(currentX, Y, zBottom);
+			glm::vec3 c(nextX, Y, zBottom);
+			glm::vec3 d(nextX, Y, zTop);
+
+			lineMesh->addQuadTex(a, b, c, d, glm::vec3(0.0f, 1.0f, 0.0f));
+		}
+		break;
+		case Line::Orientation::VERTICAL:
+		{
+			float height = abs(line->start.z - line->end.z);
+			float startZ = (line->start.z < line->end.z) ? 0.0f : -height;
+
+			float currentZ = (height / quadNum) * i + startZ;
+			float nextZ = (height / quadNum) * (i + 1) + startZ;
+			float Y = line->start.y;
+			// float xLeft = line->start.x - halfWidth, xRight = line->start.x + halfWidth;
+			float xLeft = 0.0f - halfWidth, xRight = 0.0f + halfWidth;
+
+			glm::vec3 a(xLeft, Y, currentZ);
+			glm::vec3 b(xLeft, Y, nextZ);
+			glm::vec3 c(xRight, Y, nextZ);
+			glm::vec3 d(xRight, Y, currentZ);
+
+			lineMesh->addQuadTex(a, b, c, d, glm::vec3(0.0f, 1.0f, 0.0f));
+		}
+			break;
+		default:
+			break;
+		}
+	}
+
+	return lineMesh;
+}
+
+std::shared_ptr<Mesh> GeometryFactory::GetCornerTrackMesh(std::shared_ptr<const Corner> corner, float halfWidth)
+{
+	auto cornerMesh = std::make_shared<Mesh>();
+	float Y = corner->center.y;
+
+	glm::vec3 a(0.0f, Y, -3.0f / 4.0f * corner->radius);
+	glm::vec3 b(0.0f, Y, -1.0f / 4.0f * corner->radius);
+	glm::vec3 c(1.0f / 4.0f * corner->radius, Y, 0.0f);
+	glm::vec3 d(3.0f / 4.0f * corner->radius, Y, 0.0f);
+	glm::vec3 e(3.0f / 4.0f * corner->radius, Y, -1.0f / 2.0f * corner->radius);
+	glm::vec3 f(1.0f / 2.0f * corner->radius, Y, -3.0f / 4.0f * corner->radius);
+
+	glm::vec3 normal(0.0f, 1.0f, 0.0f);
+
+	cornerMesh->addTriangleTex(a, b, f, normal);
+	cornerMesh->addTriangleTex(f, b, c, normal);
+	cornerMesh->addTriangleTex(f, c, e, normal);
+	cornerMesh->addTriangleTex(e, c, d, normal);
+
+	return cornerMesh;
 }

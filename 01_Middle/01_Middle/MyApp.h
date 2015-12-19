@@ -91,8 +91,14 @@ protected:
 
 	// Scene informations.
 	Scene currentScene;
+
+	// Track components.
 	Track track;
-	void AssembleTrack();
+	std::vector<std::shared_ptr<Mesh>> trackSectionMeshes;
 	float speed;
+	GLuint asphaltTextureID;
+
+	void AssembleTrack();
+	void DrawTrack();
 };
 

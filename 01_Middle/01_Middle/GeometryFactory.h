@@ -5,6 +5,9 @@
 
 #include <memory>
 
+class Line;
+class Corner;
+
 class GeometryFactory
 {
 public:
@@ -24,6 +27,9 @@ public:
 	static std::shared_ptr<Mesh> GetDriver();
 	static std::shared_ptr<Mesh> GetReflector();
 	static std::shared_ptr<Mesh> GetWheel();
+
+	static std::shared_ptr<Mesh> GetLineTrackMesh(std::shared_ptr<const Line> line, float halfWidth);
+	static std::shared_ptr<Mesh> GetCornerTrackMesh(std::shared_ptr<const Corner> corner, float halfWidth);
 protected:
 	static const int N;
 

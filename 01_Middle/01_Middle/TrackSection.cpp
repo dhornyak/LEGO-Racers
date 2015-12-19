@@ -1,5 +1,7 @@
 #include "TrackSection.h"
 
+const float TrackSection::trackHalfWidth = 4.0f * GeometryFactory::cubeWidthUnit;
+
 //////////////////////////
 // LINE
 //////////////////////////
@@ -79,6 +81,21 @@ glm::vec3 Line::GetEndPosition() const
 	return end;
 }
 
+std::shared_ptr<Mesh> Line::GetMesh() const
+{
+	return GeometryFactory::GetLineTrackMesh(shared_from_this(), trackHalfWidth);
+}
+
+glm::vec3 Line::TranslateMeshTo() const
+{
+	return start;
+}
+
+float Line::GetRotationAroundY() const
+{
+	return 0.0f;
+}
+
 //////////////////////////
 // CORNER
 //////////////////////////
@@ -136,6 +153,21 @@ glm::vec3 Corner::GetEndPosition() const
 {
 	float endAngle = (direction == Direction::PLUS) ? quadrant * M_PI / 2.0f : (quadrant - 1) * M_PI / 2.0f;
 	return glm::vec3(radius * cos(endAngle), center.y, -radius * sin(endAngle)) + center;
+}
+
+std::shared_ptr<Mesh> Corner::GetMesh() const
+{
+	return GeometryFactory::GetCornerTrackMesh(shared_from_this(), trackHalfWidth);
+}
+
+glm::vec3 Corner::TranslateMeshTo() const
+{
+	return center;
+}
+
+float Corner::GetRotationAroundY() const
+{
+	return quadrant * 90.0f;
 }
 
 //////////////////////////
