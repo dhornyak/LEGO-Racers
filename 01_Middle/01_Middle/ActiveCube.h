@@ -12,7 +12,7 @@ class Position
 {
 public:
 	Position(int row, int col, int height):
-		row(row), col(col), height(height)
+			row(row), col(col), height(height)
 	{ }
 
 	int row;

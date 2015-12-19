@@ -61,8 +61,8 @@ protected:
 	Position defaultActiveCubePos;
 
 	std::vector<std::shared_ptr<Cube>> cubes;
-	void DrawCube(std::shared_ptr<Cube> cube);
-	void DrawAllCubes(bool filterOuterCubes = false);
+	void DrawCube(std::shared_ptr<Cube> cube, bool decoration = false);
+	void DrawAllCubes(std::vector<std::shared_ptr<Cube>> cubesToDraw, bool filterOuterCubes = false, bool decorations = false);
 
 	std::map<CubeSize, std::shared_ptr<Mesh>> cubePrefabs;
 	void InitCubePrefabs();
@@ -78,6 +78,8 @@ protected:
 
 	glm::mat4 GetCubeRotationMatrix(std::shared_ptr<Cube> cube);
 	void PutDownActiveCube();
+	void CalculateCubeRowAndColnums(std::shared_ptr<Cube> cube, int &cubeRowNum, int &cubeColNum);
+	int FindMaxHeightBelowCube(std::shared_ptr<Cube> cube, int cubeRowNum, int cubeColNum);
 
 	// Special cube identifiers.
 	CubeSize reflectorSize, driverSize, wheelSize, chassisSize;
@@ -101,6 +103,9 @@ protected:
 
 	GLuint asphaltTextureID;
 	GLuint finishLineTextureID;
+
+	std::vector<std::shared_ptr<Cube>> decorations;
+	void InitDecorations();
 
 	void AssembleTrack();
 	void DrawTrack();

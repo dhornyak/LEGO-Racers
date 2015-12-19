@@ -45,6 +45,7 @@ bool CMyApp::Init()
 	InitCubeZPuffer();
 	InitInitialiVehicleParts();
 	PrintCubeZPuffer();
+	InitDecorations();
 
 	currentScene = Scene::EDITING;
 	light = LightOptions::EDITING;
@@ -194,13 +195,14 @@ void CMyApp::Render()
 		DrawBasePlain();
 		DrawFloor();
 		DrawInitialVehicleParts();
-		DrawAllCubes();
+		DrawAllCubes(cubes);
 		DrawCube(activeCube);
 		break;
 	case Scene::FINISH:
 	case Scene::RACING:
 		DrawInitialVehicleParts();
-		DrawAllCubes(true);
+		DrawAllCubes(cubes, true);
+		DrawAllCubes(decorations, false, true);
 		DrawTrack();
 		break;
 	default:
@@ -223,10 +225,16 @@ void CMyApp::KeyboardDown(SDL_KeyboardEvent &key)
 		++activeCube->position.row;
 		break;
 	case SDLK_KP_3:
-		if (activeCube->position.height - 1 > cubeZPuffer[activeCube->position.row + halfFloorSize][activeCube->position.col + halfFloorSize])
+	{
+		int cubeRowNum, cubeColNum;
+		CalculateCubeRowAndColnums(activeCube, cubeRowNum, cubeColNum);
+		int maxheight = FindMaxHeightBelowCube(activeCube, cubeRowNum, cubeColNum);
+
+		if (activeCube->position.height - 1 > maxheight)
 		{
 			--activeCube->position.height;
 		}
+	}
 		break;
 	case SDLK_KP_4:
 		--activeCube->position.col;
@@ -396,6 +404,41 @@ void CMyApp::InitInitialiVehicleParts()
 	UpdateCubeZPuffer(halfFloorSize + chassisSize.rows / 2 - wheelSize.rows, halfFloorSize - chassisSize.cols / 2 - 1, wheelSize.rows, wheelSize.cols, -1);
 }
 
+void CMyApp::InitDecorations()
+{
+	std::vector<std::pair<Position, CubeColor>> piramidPositions =
+	{
+		std::make_pair(Position(7, 7, 0), CubeColor::YELLOW),
+		std::make_pair(Position(-27, -3, 0), CubeColor::WHITE),
+		std::make_pair(Position(-30, -20, 0), CubeColor::GREEN),
+		std::make_pair(Position(-13, -23, 0), CubeColor::RED),
+		std::make_pair(Position(-29, 20, 0), CubeColor::BLUE),
+		std::make_pair(Position(-50, 15, 0), CubeColor::GRAY)
+	};
+
+	std::for_each(piramidPositions.begin(), piramidPositions.end(), [this](auto pair)
+	{
+		decorations.push_back(std::make_shared<Cube>(Position(pair.first.row, pair.first.col, 0), cubeColorTextures.find(pair.second), 0.0f, cubePrefabs.find(CubeSize(2, 2, (int)CubeHeight::NORMAL))));
+		decorations.push_back(std::make_shared<Cube>(Position(pair.first.row, pair.first.col + 2, 0), cubeColorTextures.find(pair.second), 0.0f, cubePrefabs.find(CubeSize(2, 2, (int)CubeHeight::NORMAL))));
+		decorations.push_back(std::make_shared<Cube>(Position(pair.first.row, pair.first.col + 4, 0), cubeColorTextures.find(pair.second), 0.0f, cubePrefabs.find(CubeSize(2, 2, (int)CubeHeight::NORMAL))));
+		
+		decorations.push_back(std::make_shared<Cube>(Position(pair.first.row + 2, pair.first.col, 0), cubeColorTextures.find(pair.second), 0.0f, cubePrefabs.find(CubeSize(2, 2, (int)CubeHeight::NORMAL))));
+		decorations.push_back(std::make_shared<Cube>(Position(pair.first.row + 2, pair.first.col + 2, 0), cubeColorTextures.find(pair.second), 0.0f, cubePrefabs.find(CubeSize(2, 2, (int)CubeHeight::NORMAL))));
+		decorations.push_back(std::make_shared<Cube>(Position(pair.first.row + 2, pair.first.col + 4, 0), cubeColorTextures.find(pair.second), 0.0f, cubePrefabs.find(CubeSize(2, 2, (int)CubeHeight::NORMAL))));
+		
+		decorations.push_back(std::make_shared<Cube>(Position(pair.first.row + 4, pair.first.col, 0), cubeColorTextures.find(pair.second), 0.0f, cubePrefabs.find(CubeSize(2, 2, (int)CubeHeight::NORMAL))));
+		decorations.push_back(std::make_shared<Cube>(Position(pair.first.row + 4, pair.first.col + 2, 0), cubeColorTextures.find(pair.second), 0.0f, cubePrefabs.find(CubeSize(2, 2, (int)CubeHeight::NORMAL))));
+		decorations.push_back(std::make_shared<Cube>(Position(pair.first.row + 4, pair.first.col + 4, 0), cubeColorTextures.find(pair.second), 0.0f, cubePrefabs.find(CubeSize(2, 2, (int)CubeHeight::NORMAL))));
+
+		decorations.push_back(std::make_shared<Cube>(Position(pair.first.row + 1, pair.first.col + 1, 3), cubeColorTextures.find(pair.second), 0.0f, cubePrefabs.find(CubeSize(2, 2, (int)CubeHeight::NORMAL))));
+		decorations.push_back(std::make_shared<Cube>(Position(pair.first.row + 1, pair.first.col + 3, 3), cubeColorTextures.find(pair.second), 0.0f, cubePrefabs.find(CubeSize(2, 2, (int)CubeHeight::NORMAL))));
+		decorations.push_back(std::make_shared<Cube>(Position(pair.first.row + 3, pair.first.col + 1, 3), cubeColorTextures.find(pair.second), 0.0f, cubePrefabs.find(CubeSize(2, 2, (int)CubeHeight::NORMAL))));
+		decorations.push_back(std::make_shared<Cube>(Position(pair.first.row + 3, pair.first.col + 3, 3), cubeColorTextures.find(pair.second), 0.0f, cubePrefabs.find(CubeSize(2, 2, (int)CubeHeight::NORMAL))));
+
+		decorations.push_back(std::make_shared<Cube>(Position(pair.first.row + 2, pair.first.col + 2, 6), cubeColorTextures.find(pair.second), 0.0f, cubePrefabs.find(CubeSize(2, 2, (int)CubeHeight::NORMAL))));
+	});
+}
+
 void CMyApp::AssembleTrack()
 {
 	// Track lines and corners.
@@ -503,16 +546,7 @@ void CMyApp::PrintCubeZPuffer()
 void CMyApp::PutDownActiveCube()
 {
 	int cubeRowNum, cubeColNum;
-
-	// Determine row and column nums based on rotation of the active cube.
-	if (fmod(activeCube->rotation, 180.0f) == 0.0)
-	{
-		cubeRowNum = activeCube->mesh->first.rows; cubeColNum = activeCube->mesh->first.cols;
-	}
-	else
-	{
-		cubeRowNum = activeCube->mesh->first.cols; cubeColNum = activeCube->mesh->first.rows;
-	}
+	CalculateCubeRowAndColnums(activeCube, cubeRowNum, cubeColNum);
 
 	// Check whether the active cube is above the base panel.
 	if (!(activeCube->position.row + cubeRowNum <= halfFloorSize && activeCube->position.col + cubeColNum <= halfFloorSize))
@@ -521,21 +555,7 @@ void CMyApp::PutDownActiveCube()
 	}
 
 	// Find maximal Z value in the puffer below the active cube.
-	int zPufferRowInd, zPufferColInd;
-	int maxHeight = cubeZPuffer[activeCube->position.row + halfFloorSize][activeCube->position.col + halfFloorSize];
-
-	for (int r = activeCube->position.row; r < activeCube->position.row + cubeRowNum; ++r)
-	{
-		for (int c = activeCube->position.col; c < activeCube->position.col + cubeColNum; ++c)
-		{
-			zPufferRowInd = r + halfFloorSize; zPufferColInd = c + halfFloorSize;
-			int currentZ = cubeZPuffer[zPufferRowInd][zPufferColInd];
-
-			if (currentZ >= activeCube->position.height || currentZ < 0) return;
-
-			if (currentZ > maxHeight) maxHeight = currentZ;
-		}
-	}
+	int maxHeight = FindMaxHeightBelowCube(activeCube, cubeRowNum, cubeColNum);
 
 	// There is only one driver allowed.
 	if (activeCube->mesh->first == driverSize && driverPlaced)
@@ -545,6 +565,20 @@ void CMyApp::PutDownActiveCube()
 	else if (activeCube->mesh->first == driverSize)
 	{
 		driverPlaced = true;
+	}
+
+	// We cant build above special element and below a placed one!
+	int zPufferRowInd, zPufferColInd;
+
+	for (int r = activeCube->position.row; r < activeCube->position.row + cubeRowNum; ++r)
+	{
+		for (int c = activeCube->position.col; c < activeCube->position.col + cubeColNum; ++c)
+		{
+			zPufferRowInd = r + halfFloorSize; zPufferColInd = c + halfFloorSize;
+			int currentZ = cubeZPuffer[zPufferRowInd][zPufferColInd];
+
+			if (currentZ >= activeCube->position.height || currentZ < 0) return;
+		}
 	}
 
 	// Update Z puffer with dimensions of the active cube.
@@ -566,6 +600,38 @@ void CMyApp::PutDownActiveCube()
 
 	// Print Z-puffer to console.
 	PrintCubeZPuffer();
+}
+
+void CMyApp::CalculateCubeRowAndColnums(std::shared_ptr<Cube> cube, int &cubeRowNum, int &cubeColNum)
+{
+	// Determine row and column nums based on rotation of the active cube.
+	if (fmod(activeCube->rotation, 180.0f) == 0.0)
+	{
+		cubeRowNum = cube->mesh->first.rows; cubeColNum = cube->mesh->first.cols;
+	}
+	else
+	{
+		cubeRowNum = cube->mesh->first.cols; cubeColNum = cube->mesh->first.rows;
+	}
+}
+
+int CMyApp::FindMaxHeightBelowCube(std::shared_ptr<Cube> cube, int cubeRowNum, int cubeColNum)
+{
+	int zPufferRowInd, zPufferColInd;
+	int maxHeight = cubeZPuffer[cube->position.row + halfFloorSize][cube->position.col + halfFloorSize];
+
+	for (int r = cube->position.row; r < cube->position.row + cubeRowNum; ++r)
+	{
+		for (int c = cube->position.col; c < cube->position.col + cubeColNum; ++c)
+		{
+			zPufferRowInd = r + halfFloorSize; zPufferColInd = c + halfFloorSize;
+			int currentZ = cubeZPuffer[zPufferRowInd][zPufferColInd];
+
+			if (currentZ > maxHeight) maxHeight = currentZ;
+		}
+	}
+
+	return maxHeight;
 }
 
 //////////////////////////
@@ -624,13 +690,13 @@ void CMyApp::DrawFloor()
 	m_program.Off();
 }
 
-void CMyApp::DrawCube(std::shared_ptr<Cube> cube)
+void CMyApp::DrawCube(std::shared_ptr<Cube> cube, bool decoration)
 {
 	m_program.On();
 
 	glm::mat4 matWorld = glm::scale<float>(0.1f, 0.1f, 0.1f);
 
-	if (currentScene == Scene::RACING || currentScene == Scene::FINISH)
+	if ((currentScene == Scene::RACING || currentScene == Scene::FINISH) && !decoration)
 	{
 		matWorld *= glm::translate<float>(carPosition) * glm::rotate<float>(cubeDirection, 0, 1, 0);
 	}
@@ -675,22 +741,29 @@ glm::mat4 CMyApp::GetCubeRotationMatrix(std::shared_ptr<Cube> cube)
 		rot_tr;
 }
 
-void CMyApp::DrawAllCubes(bool filterOuterCubes)
+void CMyApp::DrawAllCubes(std::vector<std::shared_ptr<Cube>> cubesToDraw, bool filterOuterCubes, bool decorations)
 {
-	std::for_each(cubes.begin(), cubes.end(), [this, filterOuterCubes](auto cube)
+	std::for_each(cubesToDraw.begin(), cubesToDraw.end(), [this, filterOuterCubes, decorations](auto cube)
 	{
 		if (filterOuterCubes)
 		{
-			if (
-				(cube->position.row >= -chassisSize.rows / 2 && cube->position.row < chassisSize.rows / 2) &&
-				(cube->position.col >= -chassisSize.cols / 2 && cube->position.col < chassisSize.cols / 2))
+			int cubeRowNum, cubeColNum;
+			CalculateCubeRowAndColnums(activeCube, cubeRowNum, cubeColNum);
+
+			if ( cube->position.height >= chassisHeight && (
+				// start corner if above the chassis
+				((cube->position.row >= -chassisSize.rows / 2 && cube->position.row < chassisSize.rows / 2) &&
+				(cube->position.col >= -chassisSize.cols / 2 && cube->position.col < chassisSize.cols / 2)) ||
+				// end corner is aboce the chassis
+				((cube->position.row + cubeRowNum >= -chassisSize.rows / 2 && cube->position.row + cubeRowNum < chassisSize.rows / 2) &&
+				(cube->position.col + cubeColNum>= -chassisSize.cols / 2 && cube->position.col + cubeColNum < chassisSize.cols / 2))))
 			{
-				DrawCube(cube);
+				DrawCube(cube, decorations);
 			}
 		}
 		else
 		{
-			DrawCube(cube);
+			DrawCube(cube, decorations);
 		}
 	});
 }
